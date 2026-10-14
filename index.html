@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Absențe lunare</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e6fd9">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f3f7fc; --card:#ffffff; --ink:#1b2a3a; --mut:#5b6b7d; --line:#d9e3ee;
+  --pri:#1e6fd9; --pri2:#e6f0fc; --ok:#17803d; --okbg:#e7f6ec; --bad:#c62828; --badbg:#fdecec;
+  --warn:#b7791f; --warnbg:#fff8e6; --head:#eaf2fb;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:linear-gradient(90deg,#1e6fd9,#2f8cf0);color:#fff;border-bottom:none;box-shadow:0 2px 8px rgba(30,111,217,.25);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;position:sticky;top:0;z-index:5}
+header h1{font-size:18px;margin:0}
+header .sub{color:rgba(255,255,255,.85);font-size:13px}
+nav{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+nav button{border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:#fff;padding:8px 12px;border-radius:8px;font-size:14px;cursor:pointer}
+nav button.on{background:#fff;border-color:#fff;color:var(--pri);font-weight:600}
+main{padding:16px;max-width:1300px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);box-shadow:0 1px 3px rgba(20,60,110,.06);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:17px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--mut);font-size:13px}
+select,input,button{font:inherit}
+select,input[type=text],input[type=number],input[type=date]{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.btn{border:1px solid var(--pri);background:var(--pri);color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer}
+.btn.sec{background:var(--card);color:var(--pri)}
+.btn.del{background:var(--card);color:var(--bad);border-color:var(--bad);padding:4px 9px}
+.btn:disabled{opacity:.5}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:center}
+th{background:var(--head);font-weight:600;font-size:13px}
+td.n{text-align:left;white-space:nowrap}
+tr.tot td{font-weight:700;background:var(--head)}
+td input[type=number]{width:62px;text-align:center;padding:6px}
+.ok{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}
+.cbad{background:var(--badbg)}.cwarn{background:var(--warnbg)}.cok{background:var(--okbg)}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:var(--pri2);color:var(--pri);margin-left:4px;font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--pri);border-radius:12px;padding:12px 14px}
+.stat:nth-child(2){border-top-color:#17803d}.stat:nth-child(3){border-top-color:#e8590c}.stat:nth-child(4){border-top-color:#c62828}.stat:nth-child(5){border-top-color:#7048e8}
+.stat b{display:block;font-size:26px}
+.stat span{color:var(--mut);font-size:13px}
+.alert{padding:8px 12px;border-radius:8px;margin:6px 0;border-left:4px solid transparent}
+.alert.bad{background:var(--badbg);border-left-color:var(--bad);font-weight:500}.alert.warn{background:var(--warnbg);border-left-color:var(--warn);color:var(--ink)}.alert.ok{background:var(--okbg);border-left-color:var(--ok);font-weight:500}.alert.info{background:var(--pri2);border-left-color:var(--pri);color:var(--ink)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut)}
+.hide{display:none}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;opacity:0;transition:.3s;pointer-events:none;z-index:9}
+#toast.on{opacity:1}
+.print-only{display:none}
+@media (max-width:640px){main{padding:10px}nav button{padding:7px 9px;font-size:13px}}
+@media print{
+  @page{size:A4 landscape;margin:7mm}
+  p{margin:2px 0}
+  body{background:#fff;color:#000;font-size:10px}
+  table{font-size:10px}
+  header,nav,.noprint,#toast{display:none!important}
+  main{padding:0;max-width:none}
+  .card{border:none;padding:0;margin:0}
+  .print-only{display:block}
+  th,td{border:1px solid #000;padding:1px 3px;color:#000;background:#fff!important}
+  th{background:#eee!important;font-size:9px;line-height:1.15}
+  td{line-height:1.2}
+  #v-bursa .tw{overflow:visible}
+  .tag{display:none}
+  section:not(.printing){display:none!important}
+}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Absențe lunare</h1><div class="sub" id="hdrSub"></div></div>
+  <nav id="nav"></nav>
+</header>
+<main>
+  <section id="v-panou"></section>
+  <section id="v-absente"></section>
+  <section id="v-documente"></section>
+  <section id="v-bursa"></section>
+  <section id="v-cereri"></section>
+  <section id="v-anual"></section>
+  <section id="v-elevi"></section>
+  <section id="v-setari"></section>
+</main>
+<div id="toast"></div>
+<script>
+"use strict";
+const LUNI=['Septembrie','Octombrie','Noiembrie','Decembrie','Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie'];
+const SEM1=['Septembrie','Octombrie','Noiembrie','Decembrie','Ianuarie'];
+const TIPURI=['Scutire','Cerere','Alte documente'];
+const KEY='absente-lunare-v1';
+const VIEWS=[['panou','Panou'],['absente','Absențe'],['documente','Documente'],['bursa','Bursă lunară'],['cereri','Cereri'],['anual','Situație anuală'],['elevi','Elevi'],['setari','Backup & setări']];
+
+const SEED_NAMES=[];
+
+function uid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4)}
+function seed(){
+  const elevi=SEED_NAMES.map(n=>({id:uid(),nume:n,burse:{teh:false,soc:false,rez:false}}));
+    return {
+    v:1,
+    settings:{an:'2026-2027',clasa:'X F',diriginte:'prof. BOTEZATU DANIEL',preluat:'',prag:10,limitaCereri:20,lunaCurenta:'Octombrie',doarBursieri:false},
+    elevi,
+    abs:{},
+    docs:[
+    ],
+    lastBackup:null
+  };
+}
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
+if(!S||!S.elevi){S=seed();save(true)}
+let view='panou';
+try{view=localStorage.getItem(KEY+'-view')||'panou'}catch(e){}
+
+function save(silent){
+  try{localStorage.setItem(KEY,JSON.stringify(S));if(!silent)toast('Salvat')}
+  catch(e){alert('Nu am putut salva datele în browser: '+e.message)}
+}
+let tT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),1400)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function num(v){const n=parseFloat(v);return isFinite(n)?n:0}
+function blank(n){return n?n:''}
+function oreTxt(n){return n===1?'1 oră':(n%100>=20||n%100===0&&n>0?n+' de ore':n+' ore')}
+
+/* ---------- calcule ---------- */
+function absOf(eid,luna){return (S.abs[eid]&&S.abs[eid][luna])||{}}
+function setAbs(eid,luna,k,v){
+  S.abs[eid]=S.abs[eid]||{};S.abs[eid][luna]=S.abs[eid][luna]||{};
+  if(v===''||v===null)delete S.abs[eid][luna][k];else S.abs[eid][luna][k]=Math.max(0,num(v));
+}
+function docsOf(eid,luna,tip){return S.docs.filter(d=>d.elevId===eid&&(!luna||d.luna===luna)&&(!tip||d.tip===tip))}
+function sumOre(list){return list.reduce((a,d)=>a+num(d.ore),0)}
+function zile(d){
+  if(!d.start&&!d.end)return 0;const a=new Date(d.start||d.end),b=new Date(d.end||d.start);
+  const z=Math.round((b-a)/864e5)+1;return z>0?z:0;
+}
+function lunaStats(eid,luna){
+  const a=absOf(eid,luna);
+  const mot=num(a.mot),nem=num(a.nem);
+  const sc=docsOf(eid,luna,'Scutire'),ce=docsOf(eid,luna,'Cerere'),al=docsOf(eid,luna,'Alte documente');
+  const oreDoc=sumOre(sc)+sumOre(ce)+sumOre(al);
+  return {mot,nem,total:mot+nem,has:('mot' in a)||('nem' in a),
+    oreSc:sumOre(sc),oreCe:sumOre(ce),oreAl:sumOre(al),oreDoc,
+    nrSc:sc.length,nrCe:ce.length,nrAl:al.length,
+    zile:[...sc,...ce,...al].reduce((x,d)=>x+zile(d),0),
+    diff:('mot' in a)?mot-oreDoc:0,deTrecut:!('mot' in a)&&oreDoc>0};
+}
+function cereriSem(eid,sem){return sumOre(S.docs.filter(d=>d.elevId===eid&&d.tip==='Cerere'&&(sem===1?SEM1.includes(d.luna):!SEM1.includes(d.luna))))}
+function bursier(e){return e.burse.teh||e.burse.soc||e.burse.rez}
+function burseTags(e){return (e.burse.teh?'<span class="tag">TEH</span>':'')+(e.burse.soc?'<span class="tag">SOC</span>':'')+(e.burse.rez?'<span class="tag">REZ</span>':'')}
+function pierde(st){return st.nem>=S.settings.prag}
+function lunaSel(id,val){return `<select id="${id}">${LUNI.map(l=>`<option ${l===val?'selected':''}>${l}</option>`).join('')}</select>`}
+
+/* ---------- navigare ---------- */
+function renderNav(){
+  document.getElementById('nav').innerHTML=VIEWS.map(([k,t])=>`<button class="${k===view?'on':''}" data-v="${k}">${t}</button>`).join('');
+  document.getElementById('hdrSub').textContent=`Clasa ${S.settings.clasa} · an școlar ${S.settings.an} · ${S.settings.diriginte}`;
+}
+document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;try{localStorage.setItem(KEY+'-view',view)}catch(_){}render()});
+function render(){
+  renderNav();
+  for(const [k] of VIEWS){const el=document.getElementById('v-'+k);el.classList.toggle('hide',k!==view);el.innerHTML=''}
+  ({panou:rPanou,absente:rAbsente,documente:rDocumente,bursa:rBursa,cereri:rCereri,anual:rAnual,elevi:rElevi,setari:rSetari})[view](document.getElementById('v-'+view));
+}
+function setLuna(l){S.settings.lunaCurenta=l;save(true);render()}
+
+/* ---------- PANOU ---------- */
+function rPanou(el){
+  if(!S.elevi.length){el.innerHTML=`<div class="card"><h2>Bun venit!</h2>
+    <p>Aplicația e goală. Ca să-ți aduci datele de pe calculator:</p>
+    <ol><li>În varianta veche (fișierul de pe Desktop) mergi la <b>Backup & setări → Backup JSON</b>.</li>
+    <li>Aici, la <b>Backup & setări → Import JSON</b>, alege fișierul descărcat.</li></ol>
+    <p class="muted">Sau adaugă elevii unul câte unul la <b>Elevi</b>.</p>
+    <button class="btn" onclick="view='setari';render()">Mergi la Backup & setări</button></div>`;return}
+  const L=S.settings.lunaCurenta;
+  let tot=0,nem=0,mot=0;const pierd=[],dif=[],cer=[],aproape=[],deT=[];
+  for(const e of S.elevi){
+    const st=lunaStats(e.id,L);tot+=st.total;nem+=st.nem;mot+=st.mot;
+    if(pierde(st))pierd.push([e,st]);else if(st.nem>=S.settings.prag-2&&st.nem>0)aproape.push([e,st]);
+    if(st.diff!==0)dif.push([e,st]);if(st.deTrecut)deT.push([e,st]);
+    for(const s of [1,2]){const c=cereriSem(e.id,s);if(c>S.settings.limitaCereri)cer.push([e,s,c])}
+  }
+  const bk=S.lastBackup?new Date(S.lastBackup):null;
+  const zileBk=bk?Math.floor((Date.now()-bk)/864e5):null;
+  el.innerHTML=`
+  <div class="card noprint"><div class="row"><b>Luna:</b>${lunaSel('pL',L)}<span class="muted">Totul de mai jos se referă la luna aleasă.</span></div></div>
+  <div class="stats">
+    <div class="stat"><b>${tot}</b><span>absențe în ${L.toLowerCase()}</span></div>
+    <div class="stat"><b>${mot}</b><span>motivate</span></div>
+    <div class="stat"><b class="${nem?'bad':''}">${nem}</b><span>nemotivate</span></div>
+    <div class="stat"><b class="${pierd.length?'bad':'ok'}">${pierd.length}</b><span>elevi cu ≥ ${S.settings.prag} nemotivate</span></div>
+    <div class="stat"><b>${S.docs.filter(d=>d.luna===L).length}</b><span>documente înregistrate</span></div>
+  </div>
+  <div class="card"><h2>De urmărit</h2>
+    ${pierd.map(([e,st])=>`<div class="alert bad">${esc(e.nume)}${burseTags(e)} — ${st.nem} nemotivate: <b>nu îndeplinește condițiile de bursă</b></div>`).join('')}
+    ${aproape.map(([e,st])=>`<div class="alert warn">${esc(e.nume)}${burseTags(e)} — ${st.nem} nemotivate, aproape de prag (${S.settings.prag})</div>`).join('')}
+    ${cer.map(([e,s,c])=>`<div class="alert warn">${esc(e.nume)} — ${c} ore motivate pe cereri în semestrul ${s===1?'I':'II'} (limita ROFUIP: ${S.settings.limitaCereri})</div>`).join('')}
+    ${dif.map(([e,st])=>`<div class="alert warn"><b>${esc(e.nume)}</b> — în catalog ai trecut <b>${oreTxt(st.mot)}</b> motivate, dar în jurnal are documente pentru <b>${oreTxt(st.oreDoc)}</b>. Verifică ${st.diff>0?'dacă lipsește un document':'orele trecute în catalog'}.</div>`).join('')}
+    ${deT.length?`<div class="alert info">${deT.length===1?'Un elev are':deT.length+' elevi au'} documente înregistrate, dar încă n-ai trecut motivatele din catalog (${deT.map(([e])=>esc(e.nume.split(' ')[0])).join(', ')}). La <b>Absențe</b> apasă „Completează motivatele din documente”.</div>`:''}
+    ${!pierd.length&&!aproape.length&&!cer.length&&!dif.length&&!deT.length?'<div class="alert ok">Nimic de semnalat pentru '+L.toLowerCase()+'.</div>':''}
+  </div>
+  <div class="card"><h2>Salvare de rezervă</h2>
+    <div class="alert ${zileBk===null||zileBk>7?'warn':'ok'}">${bk?'Ultima salvare de rezervă: '+bk.toLocaleDateString('ro-RO')+' ('+zileBk+' zile în urmă).':'Nu ai făcut încă nicio salvare de rezervă.'} Datele stau doar în acest browser — exportă des în Excel și JSON.</div>
+    <div class="row"><button class="btn" onclick="exportXlsx()">Export Excel</button><button class="btn sec" onclick="exportJson()">Backup JSON</button></div>
+  </div>`;
+  el.querySelector('#pL').onchange=e=>setLuna(e.target.value);
+}
+
+/* ---------- ABSENTE ---------- */
+function rAbsente(el){
+  const L=S.settings.lunaCurenta;
+  let tm=0,tn=0;
+  const rows=S.elevi.map((e,i)=>{
+    const st=lunaStats(e.id,L),a=absOf(e.id,L);tm+=st.mot;tn+=st.nem;
+    const chk=st.deTrecut?`<span style="color:var(--pri)">de trecut ${st.oreDoc}</span>`:st.diff===0?(st.has?'<span class="ok">✓</span>':''):`<span class="bad" title="În jurnal: ${st.oreDoc} ore">⚠ nu se potrivește</span>`;
+    return `<tr><td>${i+1}</td><td class="n">${esc(e.nume)}${burseTags(e)}</td>
+      <td><input type="number" min="0" inputmode="numeric" data-e="${e.id}" data-k="mot" value="${a.mot??''}"></td>
+      <td class="${pierde(st)?'cbad':''}"><input type="number" min="0" inputmode="numeric" data-e="${e.id}" data-k="nem" value="${a.nem??''}"></td>
+      <td><b data-t="${e.id}">${blank(st.total)}</b></td><td>${blank(st.oreDoc)}</td><td data-c="${e.id}">${chk}</td></tr>`}).join('');
+  el.innerHTML=`<div class="card">
+    <div class="row noprint" style="margin-bottom:10px"><b>Luna:</b>${lunaSel('aL',L)}
+      <button class="btn sec" id="fill">Completează motivatele din documente</button></div>
+    <p class="muted">Treci absențele din catalog: motivate (M) și nemotivate (N). Coloana „Documente” arată câte ore acoperă cererile/scutirile înregistrate — dacă nu se potrivește cu M, apare ⚠.</p>
+    <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th><th>Motivate</th><th>Nemotivate</th><th>Total</th><th>Documente (ore)</th><th>Verificare</th></tr></thead>
+    <tbody>${rows}<tr class="tot"><td></td><td class="n">TOTAL</td><td id="tm">${tm}</td><td id="tn">${tn}</td><td id="tt">${tm+tn}</td><td></td><td></td></tr></tbody></table></div></div>`;
+  el.querySelector('#aL').onchange=e=>setLuna(e.target.value);
+  el.querySelector('#fill').onclick=()=>{
+    let n=0;for(const e of S.elevi){const st=lunaStats(e.id,L);if(st.oreDoc&&!('mot' in absOf(e.id,L))){setAbs(e.id,L,'mot',st.oreDoc);n++}}
+    save(true);render();toast(n?`Completat la ${n} elevi`:'Nimic de completat (motivatele sunt deja trecute)');
+  };
+  el.querySelectorAll('input[data-e]').forEach(inp=>inp.addEventListener('change',()=>{setAbs(inp.dataset.e,L,inp.dataset.k,inp.value);save();render()}));
+}
+
+/* ---------- DOCUMENTE ---------- */
+let docFilter={luna:'',elev:''};let editId=null;
+function rDocumente(el){
+  const opts=S.elevi.map(e=>`<option value="${e.id}">${esc(e.nume)}</option>`).join('');
+  const list=S.docs.filter(d=>(!docFilter.luna||d.luna===docFilter.luna)&&(!docFilter.elev||d.elevId===docFilter.elev))
+    .sort((a,b)=>LUNI.indexOf(a.luna)-LUNI.indexOf(b.luna));
+  const nume=id=>(S.elevi.find(e=>e.id===id)||{nume:'(elev șters)'}).nume;
+  const fd=s=>s?new Date(s).toLocaleDateString('ro-RO'):'';
+  const ed=editId?S.docs.find(d=>d.id===editId):null;if(!ed)editId=null;
+  el.innerHTML=`<div class="card noprint" id="dForm" ${ed?'style="border:2px solid var(--pri)"':''}><h2>${ed?'Modifică documentul':'Înregistrează un document'}</h2>
+    <div class="form">
+      <label>Elev<select id="dE">${opts}</select></label>
+      <label>Luna${lunaSel('dL',S.settings.lunaCurenta)}</label>
+      <label>Document<select id="dT">${TIPURI.map(t=>`<option>${t}</option>`).join('')}</select></label>
+      <label>Nr. înregistrare<input type="text" id="dN" placeholder="ex. 10808/09.10.2026"></label>
+      <label>Data început<input type="date" id="dS"></label>
+      <label>Data sfârșit<input type="date" id="dF" title="Pentru o singură zi, completează doar una dintre date"></label>
+      <label>Nr. ore motivate<input type="number" id="dO" min="1" inputmode="numeric"></label>
+      <div class="row"><button class="btn" id="dAdd">${ed?'Salvează modificările':'Adaugă'}</button>${ed?'<button class="btn sec" id="dCancel">Renunță</button>':''}</div>
+    </div><p class="muted" style="margin:8px 0 0">Scutire de o singură zi: completează doar una dintre date (început sau sfârșit) — se socotește 1 zi.</p><div id="dMsg"></div></div>
+  <div class="card"><h2>Jurnal documente</h2>
+    <div class="row noprint" style="margin-bottom:10px">
+      <select id="fL"><option value="">Toate lunile</option>${LUNI.map(l=>`<option ${l===docFilter.luna?'selected':''}>${l}</option>`).join('')}</select>
+      <select id="fE"><option value="">Toți elevii</option>${S.elevi.map(e=>`<option value="${e.id}" ${e.id===docFilter.elev?'selected':''}>${esc(e.nume)}</option>`).join('')}</select>
+      <span class="muted">${list.length} documente · ${sumOre(list)} ore</span></div>
+    <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th><th>Luna</th><th>Document</th><th>Nr. înregistrare</th><th>Început</th><th>Sfârșit</th><th>Ore</th><th class="noprint"></th></tr></thead>
+    <tbody>${list.map((d,i)=>`<tr><td>${i+1}</td><td class="n">${esc(nume(d.elevId))}</td><td>${d.luna}</td><td class="${d.tip==='Cerere'?'cwarn':''}">${d.tip}</td><td>${esc(d.nr)}</td><td>${fd(d.start)}</td><td>${fd(d.end)}</td><td><b>${d.ore}</b></td><td class="noprint" style="white-space:nowrap"><button class="btn sec" style="padding:4px 9px" data-ed="${d.id}">Modifică</button> <button class="btn del" data-del="${d.id}">Șterge</button></td></tr>`).join('')||'<tr><td colspan="9" class="muted">Niciun document.</td></tr>'}</tbody></table></div></div>`;
+  el.querySelector('#fL').onchange=e=>{docFilter.luna=e.target.value;render()};
+  el.querySelector('#fE').onchange=e=>{docFilter.elev=e.target.value;render()};
+  if(ed){const f=el.querySelector('#dForm');f.querySelector('#dE').value=ed.elevId;f.querySelector('#dL').value=ed.luna;f.querySelector('#dT').value=ed.tip;
+    f.querySelector('#dN').value=ed.nr||'';f.querySelector('#dS').value=ed.start||'';f.querySelector('#dF').value=ed.end||'';f.querySelector('#dO').value=ed.ore;
+    f.querySelector('#dCancel').onclick=()=>{editId=null;render()};}
+  el.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>{editId=b.dataset.ed;render();document.getElementById('dForm').scrollIntoView({behavior:'smooth'})});
+  el.querySelector('#dAdd').onclick=()=>{
+    const d={id:ed?ed.id:uid(),elevId:el.querySelector('#dE').value,luna:el.querySelector('#dL').value,tip:el.querySelector('#dT').value,
+      nr:el.querySelector('#dN').value.trim(),start:el.querySelector('#dS').value,end:el.querySelector('#dF').value,ore:num(el.querySelector('#dO').value)};
+    if(!d.start&&d.end)d.start=d.end;if(d.start&&!d.end)d.end=d.start;
+    if(!d.ore){el.querySelector('#dMsg').innerHTML='<div class="alert bad">Scrie numărul de ore motivate.</div>';return}
+    if(d.start&&d.end&&d.end<d.start){el.querySelector('#dMsg').innerHTML='<div class="alert bad">Data de sfârșit e înaintea celei de început.</div>';return}
+    if(ed){S.docs[S.docs.findIndex(x=>x.id===ed.id)]=d;editId=null}else S.docs.push(d);save();
+    let warn='';
+    if(d.tip==='Cerere'){const s=SEM1.includes(d.luna)?1:2,c=cereriSem(d.elevId,s);if(c>S.settings.limitaCereri)warn=`<div class="alert warn">Atenție: elevul are acum ${c} ore pe cereri în semestrul ${s===1?'I':'II'} (limita ${S.settings.limitaCereri}).</div>`}
+    const keepE=d.elevId,keepL=d.luna;render();
+    const v=document.getElementById('v-documente');v.querySelector('#dE').value=keepE;v.querySelector('#dL').value=keepL;v.querySelector('#dMsg').innerHTML=(ed?'<div class="alert ok">Documentul a fost modificat.</div>':'')+warn;
+  };
+  el.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(confirm('Ștergi acest document?')){S.docs=S.docs.filter(d=>d.id!==b.dataset.del);if(editId===b.dataset.del)editId=null;save();render()}});
+}
+
+/* ---------- BURSA ---------- */
+function rBursa(el){
+  const L=S.settings.lunaCurenta,set=S.settings;
+  const elevi=S.elevi.filter(e=>!set.doarBursieri||bursier(e));
+  const T={total:0,oreSc:0,oreCe:0,oreAl:0,nem:0,nrSc:0,nrCe:0,nrAl:0,zile:0};
+  const rows=elevi.map((e,i)=>{const st=lunaStats(e.id,L);for(const k in T)T[k]+=st[k];
+    const da=!pierde(st);
+    return `<tr><td>${i+1}</td><td class="n">${esc(e.nume)}${burseTags(e)}</td><td>${blank(st.total)}</td><td>${blank(st.oreSc)}</td><td>${blank(st.oreCe)}</td><td>${blank(st.oreAl)}</td>
+    <td class="${da?'':'cbad'}">${st.nem}</td><td>${blank(st.nrSc)}</td><td>${blank(st.nrCe)}</td><td>${blank(st.zile)}</td><td>${blank(st.nrAl)}</td>
+    <td class="${da?'ok':''}">${da?'DA':''}</td><td class="${da?'':'bad'}">${da?'':'NU'}</td></tr>`}).join('');
+  const motDoc=T.oreSc+T.oreCe+T.oreAl, mot=T.total-T.nem;
+  el.innerHTML=`<div class="card noprint"><div class="row"><b>Luna:</b>${lunaSel('bL',L)}
+    <label class="row" style="gap:6px"><input type="checkbox" id="bB" ${set.doarBursieri?'checked':''}> doar elevii cu bursă</label>
+    <button class="btn" onclick="printBursa()">Tipărește macheta (A4)</button></div>
+    ${mot!==motDoc?`<div class="alert warn">Motivatele din catalog (${mot}) nu se potrivesc cu orele din documente (${motDoc}). Verifică la „Absențe”.</div>`:''}</div>
+  <div class="card">
+    <div style="text-align:center"><b>MONITORIZARE ABSENȚE BURSĂ</b><br>AN ȘCOLAR ${esc(set.an)}</div>
+    <p><b>CLASA: ${esc(set.clasa)}</b> &nbsp;&nbsp; <b>LUNA: ${L.toUpperCase()} ${lunaAn(L)}</b></p>
+    <div class="tw"><table><thead><tr><th rowspan="2">Nr. crt.</th><th rowspan="2">Numele și prenumele elevului</th><th rowspan="2">Total absențe</th>
+      <th rowspan="2">Nr. absențe motivate pe bază de scutiri medicale</th><th rowspan="2">Nr. absențe motivate pe bază de cereri</th><th rowspan="2">Nr. absențe motivate alte motive</th>
+      <th rowspan="2">Total absențe nemotivate</th><th rowspan="2">Nr. scutiri</th><th rowspan="2">Nr. cereri</th><th rowspan="2">Total zile</th><th rowspan="2">Alte documente</th>
+      <th colspan="2">Îndeplinește condițiile de acordare a bursei</th></tr><tr><th>DA</th><th>NU</th></tr></thead>
+      <tbody>${rows}<tr class="tot"><td></td><td class="n">TOTAL</td><td>${T.total}</td><td>${T.oreSc}</td><td>${T.oreCe}</td><td>${T.oreAl}</td><td>${T.nem}</td><td>${T.nrSc}</td><td>${T.nrCe}</td><td>${T.zile}</td><td>${T.nrAl}</td><td colspan="2"></td></tr></tbody></table></div>
+    <div style="margin-top:10px;font-size:12px">
+      <p>• Total absențe = numărul total de absențe acumulat de elev în luna pentru care se realizează monitorizarea;<br>
+      • Total absențe motivate pe bază de scutiri medicale = numărul de absențe motivate cu scutiri medicale pentru luna respectivă;<br>
+      • Total absențe motivate pe bază de cereri = numărul de absențe motivate cu cereri aprobate pentru luna respectivă;<br>
+      • Conform ROFUIP elevul poate beneficia de motivarea a cel mult ${set.limitaCereri} ore de curs pe semestru pe bază de cereri scrise ale părinților/tutorelui legal/elevului major.</p>
+      <p>Subsemnata/Subsemnatul ${esc(set.preluat)} am preluat:<br>– Macheta de monitorizare a absențelor;<br>– Referat pentru retragerea bursei adresat Comisiei de monitorizare;<br>
+      <b>${T.nrCe}</b> : cereri de motivare a absențelor aprobate de director;<br><b>${T.nrSc}</b> : scutiri medicale;<br><b>${T.nrAl}</b> : alte motive.</p>
+      <table style="border:none;margin-top:14px"><tr><td style="border:none;text-align:left;width:50%">${esc(set.preluat)}</td><td style="border:none;text-align:left">Diriginte,<br>${esc(set.diriginte)}</td></tr></table>
+    </div></div>`;
+  el.querySelector('#bL').onchange=e=>setLuna(e.target.value);
+  el.querySelector('#bB').onchange=e=>{S.settings.doarBursieri=e.target.checked;save(true);render()};
+}
+function lunaAn(L){const y=parseInt(S.settings.an);return SEM1.includes(L)&&L!=='Ianuarie'?y:y+1}
+function printBursa(){const s=document.getElementById('v-bursa');s.classList.add('printing');window.print();s.classList.remove('printing')}
+
+/* ---------- CERERI ---------- */
+function rCereri(el){
+  const lim=S.settings.limitaCereri;
+  const rows=S.elevi.map((e,i)=>{
+    const vals=LUNI.map(l=>sumOre(docsOf(e.id,l,'Cerere')));
+    const s1=cereriSem(e.id,1),s2=cereriSem(e.id,2);
+    const c=v=>v>lim?'cbad':v>=lim*0.75?'cwarn':'';
+    return `<tr><td>${i+1}</td><td class="n">${esc(e.nume)}</td>${vals.map(v=>`<td>${blank(v)}</td>`).join('')}<td class="${c(s1)}"><b>${blank(s1)}</b></td><td class="${c(s2)}"><b>${blank(s2)}</b></td><td><b>${blank(s1+s2)}</b></td></tr>`}).join('');
+  el.innerHTML=`<div class="card"><h2>Absențe motivate pe bază de cereri</h2>
+  <p class="muted">Se calculează singur din „Documente”. Limita ROFUIP: ${lim} ore pe semestru (sem. I: septembrie–ianuarie, sem. II: februarie–iunie). Galben = peste 75% din limită, roșu = depășită.</p>
+  <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th>${LUNI.map(l=>`<th>${l.slice(0,3).toUpperCase()}</th>`).join('')}<th>Sem. I</th><th>Sem. II</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+
+/* ---------- ANUAL ---------- */
+function rAnual(el){
+  const P=S.settings.prag;let TM=Array(LUNI.length).fill(0),TN=Array(LUNI.length).fill(0);
+  const rows=S.elevi.map((e,i)=>{let sm=0,sn=0;
+    const cells=LUNI.map((l,j)=>{const st=lunaStats(e.id,l);sm+=st.mot;sn+=st.nem;TM[j]+=st.mot;TN[j]+=st.nem;
+      return `<td>${blank(st.mot)}</td><td class="${st.nem>=P?'cbad':''}">${blank(st.nem)}</td><td><b>${blank(st.total)}</b></td>`}).join('');
+    return `<tr><td>${i+1}</td><td class="n">${esc(e.nume)}</td>${cells}<td><b>${sm+sn}</b></td><td>${sn}</td><td>${sm}</td></tr>`}).join('');
+  const sM=TM.reduce((a,b)=>a+b,0),sN=TN.reduce((a,b)=>a+b,0);
+  el.innerHTML=`<div class="card"><h2>Situația absențelor pe an</h2>
+  <p class="muted">M = motivate, N = nemotivate, T = total. Roșu = ${P} sau mai multe nemotivate într-o lună.</p>
+  <div class="tw"><table><thead><tr><th rowspan="2">Nr.</th><th rowspan="2">Numele și prenumele</th>${LUNI.map(l=>`<th colspan="3">${l.toUpperCase()}</th>`).join('')}<th rowspan="2">TOTAL ABS.</th><th rowspan="2">TOTAL NEMOT.</th><th rowspan="2">TOTAL MOT.</th></tr>
+  <tr>${LUNI.map(()=>'<th>M</th><th>N</th><th>T</th>').join('')}</tr></thead>
+  <tbody>${rows}<tr class="tot"><td></td><td class="n">TOTAL</td>${LUNI.map((l,j)=>`<td>${TM[j]}</td><td>${TN[j]}</td><td>${TM[j]+TN[j]}</td>`).join('')}<td>${sM+sN}</td><td>${sN}</td><td>${sM}</td></tr></tbody></table></div></div>`;
+}
+
+/* ---------- ELEVI ---------- */
+function rElevi(el){
+  el.innerHTML=`<div class="card"><h2>Elevii clasei ${esc(S.settings.clasa)}</h2>
+  <p class="muted">Bifează ce bursă are fiecare elev. Numele se pot corecta direct în tabel.</p>
+  <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th><th>Bursă tehnologică</th><th>Bursă socială</th><th>Bursă de reziliență</th><th></th></tr></thead><tbody>
+  ${S.elevi.map((e,i)=>`<tr><td>${i+1}</td><td class="n"><input type="text" data-n="${e.id}" value="${esc(e.nume)}" style="width:100%;min-width:220px"></td>
+    ${['teh','soc','rez'].map(k=>`<td><input type="checkbox" data-b="${e.id}" data-k="${k}" ${e.burse[k]?'checked':''} style="width:20px;height:20px"></td>`).join('')}
+    <td><button class="btn del" data-x="${e.id}">Șterge</button></td></tr>`).join('')}
+  <tr class="tot"><td></td><td class="n">TOTAL</td>${['teh','soc','rez'].map(k=>`<td>${S.elevi.filter(e=>e.burse[k]).length}</td>`).join('')}<td></td></tr>
+  </tbody></table></div>
+  <div class="row" style="margin-top:12px"><input type="text" id="newE" placeholder="NUME PRENUME elev nou" style="flex:1;min-width:200px"><button class="btn" id="addE">Adaugă elev</button></div></div>`;
+  el.querySelectorAll('[data-n]').forEach(i=>i.onchange=()=>{const e=S.elevi.find(x=>x.id===i.dataset.n);e.nume=i.value.trim().toUpperCase();save()});
+  el.querySelectorAll('[data-b]').forEach(i=>i.onchange=()=>{S.elevi.find(x=>x.id===i.dataset.b).burse[i.dataset.k]=i.checked;save();render()});
+  el.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{
+    const e=S.elevi.find(x=>x.id===b.dataset.x);const n=S.docs.filter(d=>d.elevId===e.id).length;
+    if(!confirm(`Ștergi elevul ${e.nume}?`+(n?`\nSe șterg și cele ${n} documente ale lui.`:'')))return;
+    S.elevi=S.elevi.filter(x=>x.id!==e.id);S.docs=S.docs.filter(d=>d.elevId!==e.id);delete S.abs[e.id];save();render()});
+  el.querySelector('#addE').onclick=()=>{const v=el.querySelector('#newE').value.trim().toUpperCase();if(!v)return;
+    S.elevi.push({id:uid(),nume:v,burse:{teh:false,soc:false,rez:false}});S.elevi.sort((a,b)=>a.nume.localeCompare(b.nume,'ro'));save();render()};
+}
+
+/* ---------- SETARI ---------- */
+function rSetari(el){
+  const s=S.settings;
+  el.innerHTML=`<div class="card"><h2>Salvare de rezervă</h2>
+    <p class="muted">Datele stau doar în browserul acesta. Exportă des. Fișierul Excel îl poți deschide oricând; fișierul JSON îl folosești ca să muți datele pe alt calculator/tabletă (Import).</p>
+    <div class="row"><button class="btn" onclick="exportXlsx()">Export Excel (.xlsx)</button><button class="btn sec" onclick="exportJson()">Backup JSON</button>
+    <label class="btn sec">Import JSON<input type="file" id="imp" accept=".json,application/json" class="hide"></label></div></div>
+  <div class="card"><h2>Adaugă date din fișier</h2>
+    <p class="muted">Pentru fișierele pregătite de Claude (de ex. „Date septembrie pentru aplicatie.json”). Datele se <b>adaugă</b> peste cele existente: absențele lunii din fișier se completează, documentele noi se adaugă, iar cele cu același nr. de înregistrare se actualizează. Nu se șterge nimic.</p>
+    <label class="btn">Alege fișierul…<input type="file" id="merge" accept=".json,application/json" class="hide"></label><div id="mMsg"></div>
+    <p class="muted">${S.lastBackup?'Ultima salvare de rezervă: '+new Date(S.lastBackup).toLocaleString('ro-RO'):'Nicio salvare de rezervă încă.'}</p></div>
+  <div class="card"><h2>Setări</h2><div class="form">
+    <label>An școlar<input type="text" data-s="an" value="${esc(s.an)}"></label>
+    <label>Clasa<input type="text" data-s="clasa" value="${esc(s.clasa)}"></label>
+    <label>Diriginte<input type="text" data-s="diriginte" value="${esc(s.diriginte)}"></label>
+    <label>Persoana care preia macheta<input type="text" data-s="preluat" value="${esc(s.preluat)}"></label>
+    <label>Pierde bursa de la (nemotivate/lună)<input type="number" min="1" data-s="prag" value="${s.prag}"></label>
+    <label>Limită ore pe cereri/semestru<input type="number" min="1" data-s="limitaCereri" value="${s.limitaCereri}"></label>
+  </div></div>
+  <div class="card"><h2>An școlar nou</h2><p class="muted">Șterge absențele și documentele, dar păstrează elevii și setările. Fă întâi un export!</p>
+    <button class="btn del" id="reset" style="padding:8px 14px">Golește absențele și documentele</button></div>`;
+  el.querySelectorAll('[data-s]').forEach(i=>i.onchange=()=>{const k=i.dataset.s;s[k]=i.type==='number'?Math.max(1,num(i.value)):i.value.trim();save();renderNav()});
+  el.querySelector('#merge').onchange=ev=>{const f=ev.target.files[0];if(!f)return;const r=new FileReader();
+    r.onload=()=>{try{const d=JSON.parse(r.result);if(d.tip!=='completare-absente')throw new Error('nu e un fișier de completare (pentru backup complet folosește „Import JSON”)');
+      const res=mergeData(d);save();render();document.getElementById('mMsg').innerHTML=`<div class="alert ok">Gata! Absențe completate la ${res.abs} elevi, ${res.add} documente adăugate, ${res.upd} actualizate.</div>`+(res.miss.length?`<div class="alert warn">Nu am găsit în listă: ${res.miss.map(esc).join(', ')}</div>`:'')}
+      catch(e){alert('Nu am putut adăuga datele: '+e.message)}};r.readAsText(f);ev.target.value=''};
+  el.querySelector('#imp').onchange=ev=>{const f=ev.target.files[0];if(!f)return;const r=new FileReader();
+    r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.elevi||!d.docs||!d.abs)throw new Error('fișierul nu e un backup al acestei aplicații');
+      if(!confirm('Înlocuiești datele actuale cu cele din fișier?'))return;S=d;save();render();toast('Date importate')}catch(e){alert('Import eșuat: '+e.message)}};r.readAsText(f)};
+  el.querySelector('#reset').onclick=()=>{if(confirm('Sigur golești toate absențele și documentele?')){S.abs={};S.docs=[];save();render()}};
+}
+
+function normN(n){return String(n||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z]/g,'')}
+function mergeData(d){
+  const find=n=>S.elevi.find(e=>normN(e.nume)===normN(n));const miss=new Set();let abs=0,add=0,upd=0;
+  for(const [n,luni] of Object.entries(d.abs||{})){const e=find(n);if(!e){miss.add(n);continue}abs++;
+    for(const [l,v] of Object.entries(luni)){if('mot' in v)setAbs(e.id,l,'mot',v.mot);if('nem' in v)setAbs(e.id,l,'nem',v.nem)}}
+  for(const x of d.docs||[]){const e=find(x.nume);if(!e){miss.add(x.nume);continue}
+    const doc={elevId:e.id,luna:x.luna,tip:x.tip,nr:x.nr||'',start:x.start||'',end:x.end||'',ore:num(x.ore)};
+    const old=S.docs.find(o=>o.elevId===e.id&&o.luna===doc.luna&&o.nr&&o.nr===doc.nr&&o.tip===doc.tip);
+    if(old){Object.assign(old,doc);upd++}else{S.docs.push({id:uid(),...doc});add++}}
+  return {abs,add,upd,miss:[...miss]};
+}
+/* ---------- EXPORT ---------- */
+function stamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function exportJson(){S.lastBackup=Date.now();save(true);download(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),`Absente ${S.settings.clasa} backup ${stamp()}.json`);render()}
+
+/* mini scriitor XLSX (fără biblioteci, funcționează offline) */
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function zip(files){
+  const enc=new TextEncoder(),parts=[],cen=[];let off=0;
+  for(const [name,str] of files){
+    const nb=enc.encode(name),data=enc.encode(str),crc=crc32(data);
+    const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);
+    h.setUint32(14,crc,true);h.setUint32(18,data.length,true);h.setUint32(22,data.length,true);h.setUint16(26,nb.length,true);
+    parts.push(new Uint8Array(h.buffer),nb,data);
+    const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);
+    c.setUint32(16,crc,true);c.setUint32(20,data.length,true);c.setUint32(24,data.length,true);c.setUint16(28,nb.length,true);c.setUint32(42,off,true);
+    cen.push(new Uint8Array(c.buffer),nb);off+=30+nb.length+data.length;
+  }
+  const cs=cen.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+function colL(i){let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
+function xesc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'')}
+/* sheet: {name, rows:[[...]], head:n (rânduri antet bold), widths:[...], merges:['A1:B1']} */
+function sheetXml(sh){
+  const rows=sh.rows.map((r,ri)=>`<row r="${ri+1}">`+r.map((v,ci)=>{
+    if(v===''||v===null||v===undefined)return '';const ref=colL(ci)+(ri+1),st=ri<(sh.head||0)?' s="1"':(sh.boldRows&&sh.boldRows.includes(ri)?' s="1"':' s="2"');
+    return typeof v==='number'?`<c r="${ref}"${st}><v>${v}</v></c>`:`<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`}).join('')+'</row>').join('');
+  const cols=sh.widths?`<cols>${sh.widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`:'';
+  const mg=sh.merges&&sh.merges.length?`<mergeCells count="${sh.merges.length}">${sh.merges.map(m=>`<mergeCell ref="${m}"/>`).join('')}</mergeCells>`:'';
+  const fr=sh.head?`<sheetViews><sheetView workbookViewId="0"><pane ySplit="${sh.head}" topLeftCell="A${sh.head+1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`:'';
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${fr}${cols}<sheetData>${rows}</sheetData>${mg}<pageSetup orientation="landscape" paperSize="9"/></worksheet>`;
+}
+function buildXlsx(sheets){
+  const ct=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`;
+  const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const wb=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${xesc(s.name.slice(0,31))}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`;
+  const wbr=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+  const sty=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDDE6F0"/></patternFill></fill></fills><borders count="2"><border/><border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="3"><xf/><xf fontId="1" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf borderId="1" applyBorder="1"/></cellXfs></styleSheet>`;
+  return zip([['[Content_Types].xml',ct],['_rels/.rels',rels],['xl/workbook.xml',wb],['xl/_rels/workbook.xml.rels',wbr],['xl/styles.xml',sty],...sheets.map((s,i)=>[`xl/worksheets/sheet${i+1}.xml`,sheetXml(s)])]);
+}
+function exportXlsx(){
+  const z=v=>v?v:'',sheets=[];
+  // 1. Absente lunare (anual)
+  const h1=['Nr.','Numele și prenumele'],h2=['',''],m=['A1:A2','B1:B2'];
+  LUNI.forEach((l,j)=>{h1.push(l.toUpperCase(),'','');h2.push('MOT.','NEMOT.','TOTAL');const c=2+j*3;m.push(`${colL(c)}1:${colL(c+2)}1`)});
+  h1.push('TOTAL ABS.','TOTAL NEMOT.','TOTAL MOT.');h2.push('','','');[0,1,2].forEach(k=>{const c=2+LUNI.length*3+k;m.push(`${colL(c)}1:${colL(c)}2`)});
+  const r1=[h1,h2];S.elevi.forEach((e,i)=>{let sm=0,sn=0;const r=[i+1,e.nume];LUNI.forEach(l=>{const st=lunaStats(e.id,l);sm+=st.mot;sn+=st.nem;r.push(z(st.mot),z(st.nem),z(st.total))});r.push(sm+sn,sn,sm);r1.push(r)});
+  sheets.push({name:'ABS. LUNARE',rows:r1,head:2,merges:m,widths:[5,32,...Array(LUNI.length*3).fill(7),10,10,10]});
+  // 2. Jurnal
+  const nume=id=>(S.elevi.find(e=>e.id===id)||{nume:''}).nume;
+  const fd=s=>s?new Date(s).toLocaleDateString('ro-RO'):'';
+  const docs=[...S.docs].sort((a,b)=>LUNI.indexOf(a.luna)-LUNI.indexOf(b.luna)||nume(a.elevId).localeCompare(nume(b.elevId),'ro'));
+  sheets.push({name:'Jurnal',head:1,widths:[5,32,12,16,20,12,12,10],rows:[['Nr.','Numele și prenumele','Luna','Document','Nr. înregistrare','Data început','Data sfârșit','Nr. ore motivate'],
+    ...docs.map((d,i)=>[i+1,nume(d.elevId),d.luna,d.tip,d.nr,fd(d.start),fd(d.end),num(d.ore)])]});
+  // 3. Bursa pe fiecare lună cu date
+  LUNI.forEach(L=>{
+    if(!S.elevi.some(e=>{const st=lunaStats(e.id,L);return st.has||st.oreDoc}))return;
+    const rows=[['MONITORIZARE ABSENȚE BURSĂ — AN ȘCOLAR '+S.settings.an],['CLASA: '+S.settings.clasa+'   LUNA: '+L.toUpperCase()+' '+lunaAn(L)],[],
+      ['Nr.','Numele și prenumele elevului','Bursă','Total absențe','Motivate scutiri medicale','Motivate cereri','Motivate alte motive','Total nemotivate','Nr. scutiri','Nr. cereri','Total zile','Alte documente','Îndeplinește condițiile (DA/NU)']];
+    const T=[0,0,0,0,0,0,0,0,0];
+    S.elevi.forEach((e,i)=>{const st=lunaStats(e.id,L);const v=[st.total,st.oreSc,st.oreCe,st.oreAl,st.nem,st.nrSc,st.nrCe,st.zile,st.nrAl];v.forEach((x,k)=>T[k]+=x);
+      rows.push([i+1,e.nume,[e.burse.teh?'TEH':'',e.burse.soc?'SOC':'',e.burse.rez?'REZ':''].filter(Boolean).join(', '),...v.map((x,k)=>k===4?x:z(x)),pierde(st)?'NU':'DA'])});
+    rows.push(['','TOTAL','',...T,'']);
+    sheets.push({name:'BURSĂ '+L.toUpperCase(),rows,boldRows:[0,1,3,rows.length-1],widths:[5,32,12,9,11,10,10,11,8,8,8,9,14]});
+  });
+  // 4. Cereri
+  sheets.push({name:'CERERI',head:1,widths:[5,32,...Array(LUNI.length).fill(7),9,9,9],rows:[['Nr.','Numele și prenumele',...LUNI.map(l=>l.slice(0,3).toUpperCase()),'Sem. I','Sem. II','Total'],
+    ...S.elevi.map((e,i)=>{const s1=cereriSem(e.id,1),s2=cereriSem(e.id,2);return [i+1,e.nume,...LUNI.map(l=>z(sumOre(docsOf(e.id,l,'Cerere')))),z(s1),z(s2),z(s1+s2)]})]});
+  // 5. Elevi & burse
+  sheets.push({name:'ELEVI ȘI BURSE',head:1,widths:[5,32,12,12,12],rows:[['Nr.','Numele și prenumele','Bursă tehnologică','Bursă socială','Bursă reziliență'],
+    ...S.elevi.map((e,i)=>[i+1,e.nume,e.burse.teh?'DA':'',e.burse.soc?'DA':'',e.burse.rez?'DA':''])]});
+  S.lastBackup=Date.now();save(true);
+  download(buildXlsx(sheets),`Absente ${S.settings.clasa} ${stamp()}.xlsx`);render();
+}
+render();
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('service-worker.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
