@@ -220,7 +220,7 @@ function rPanou(el){
     ${aproape.map(([e,st])=>`<div class="alert warn">${esc(e.nume)}${burseTags(e)} — ${st.nem} nemotivate, aproape de prag (${S.settings.prag})</div>`).join('')}
     ${cer.map(([e,k,c])=>`<div class="alert ${k}">${esc(e.nume)} — ${oreTxt(c)} motivate pe cereri în acest an școlar ${k==='bad'?'— <b>a depășit limita</b>':'— mai are '+oreTxt(S.settings.limitaCereri-c)}  (limita: ${S.settings.limitaCereri}/an)</div>`).join('')}
     ${dif.map(([e,st])=>`<div class="alert warn"><b>${esc(e.nume)}</b> — în catalog ai trecut <b>${oreTxt(st.mot)}</b> motivate, dar în jurnal are documente pentru <b>${oreTxt(st.oreDoc)}</b>. Verifică ${st.diff>0?'dacă lipsește un document':'orele trecute în catalog'}.</div>`).join('')}
-    ${deT.length?`<div class="alert info">${deT.length===1?'Un elev are':deT.length+' elevi au'} documente înregistrate, dar încă n-ai trecut motivatele din catalog (${deT.map(([e])=>esc(e.nume.split(' ')[0])).join(', ')}). La <b>Absențe</b> apasă „Completează motivatele din documente”.</div>`:''}
+    ${deT.length?`<div class="alert info">Absențele din ${L.toLowerCase()} nu sunt încă importate din catalogul electronic (${deT.length===1?'un elev are':deT.length+' elevi au'} deja documente în jurnal). La sfârșitul lunii mergi la <b>Absențe</b> → <b>Importă din catalogul electronic</b>.</div>`:''}
     ${!pierd.length&&!aproape.length&&!cer.length&&!dif.length&&!deT.length?'<div class="alert ok">Nimic de semnalat pentru '+L.toLowerCase()+'.</div>':''}
   </div>
   <div class="card"><h2>Salvare de rezervă</h2>
@@ -236,15 +236,14 @@ function rAbsente(el){
   let tm=0,tn=0;
   const rows=S.elevi.map((e,i)=>{
     const st=lunaStats(e.id,L),a=absOf(e.id,L);tm+=st.mot;tn+=st.nem;
-    const chk=st.deTrecut?`<span style="color:var(--pri)">de trecut ${st.oreDoc}</span>`:st.diff===0?(st.has?'<span class="ok">✓</span>':''):`<span class="bad" title="În jurnal: ${st.oreDoc} ore">⚠ nu se potrivește</span>`;
+    const chk=st.deTrecut?`<span style="color:var(--pri)" title="În jurnal: ${st.oreDoc} ore">neimportat</span>`:st.diff===0?(st.has?'<span class="ok">✓</span>':''):`<span class="bad" title="În jurnal: ${st.oreDoc} ore">⚠ nu se potrivește</span>`;
     return `<tr><td>${i+1}</td><td class="n">${esc(e.nume)}${burseTags(e)}</td>
       <td><input type="number" min="0" inputmode="numeric" data-e="${e.id}" data-k="mot" value="${a.mot??''}"></td>
       <td class="${pierde(st)?'cbad':''}"><input type="number" min="0" inputmode="numeric" data-e="${e.id}" data-k="nem" value="${a.nem??''}"></td>
       <td><b data-t="${e.id}">${blank(st.total)}</b></td><td>${blank(st.oreDoc)}</td><td data-c="${e.id}">${chk}</td></tr>`}).join('');
   el.innerHTML=`<div class="card">
     <div class="row noprint" style="margin-bottom:10px"><b>Luna:</b>${lunaSel('aL',L)}
-      <label class="btn">Importă din catalogul electronic (Excel)<input type="file" id="xImp" accept=".xlsx" class="hide"></label>
-      <button class="btn sec" id="fill">Completează motivatele din documente</button></div>
+      <label class="btn">Importă din catalogul electronic (Excel)<input type="file" id="xImp" accept=".xlsx" class="hide"></label></div>
     <div id="xMsg"></div>
     <p class="muted">La sfârșit de lună apasă „Importă din catalogul electronic” și alege raportul lunar descărcat (ex. SEPTEMBRIE.xlsx) — luna se recunoaște singură din fișier. Poți corecta și de mână în tabel. Treci absențele din catalog: motivate (M) și nemotivate (N). Coloana „Documente” arată câte ore acoperă cererile/scutirile înregistrate — dacă nu se potrivește cu M, apare ⚠.</p>
     <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th><th>Motivate</th><th>Nemotivate</th><th>Total</th><th>Documente (ore)</th><th>Verificare</th></tr></thead>
@@ -261,10 +260,6 @@ function rAbsente(el){
         (rez.lipsa.length&&!rez.adaugati?`<div class="alert warn">Nu au fost importați (nu sunt în lista clasei): ${rez.lipsa.map(esc).join(', ')}</div>`:'')+
         (rez.nuSunt.length?`<div class="alert info">Elevi din aplicație care nu apar în fișier: ${rez.nuSunt.map(esc).join(', ')}</div>`:'');
     }catch(e){box.innerHTML=`<div class="alert bad">Nu am putut citi fișierul: ${esc(e.message)}</div>`}};
-  el.querySelector('#fill').onclick=()=>{
-    let n=0;for(const e of S.elevi){const st=lunaStats(e.id,L);if(st.oreDoc&&!('mot' in absOf(e.id,L))){setAbs(e.id,L,'mot',st.oreDoc);n++}}
-    save(true);render();toast(n?`Completat la ${n} elevi`:'Nimic de completat (motivatele sunt deja trecute)');
-  };
   el.querySelectorAll('input[data-e]').forEach(inp=>inp.addEventListener('change',()=>{setAbs(inp.dataset.e,L,inp.dataset.k,inp.value);save();render()}));
 }
 
