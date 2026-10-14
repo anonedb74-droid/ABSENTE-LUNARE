@@ -89,6 +89,7 @@ td input[type=number]{width:62px;text-align:center;padding:6px}
   <section id="v-documente"></section>
   <section id="v-bursa"></section>
   <section id="v-cereri"></section>
+  <section id="v-module"></section>
   <section id="v-anual"></section>
   <section id="v-elevi"></section>
   <section id="v-setari"></section>
@@ -98,9 +99,18 @@ td input[type=number]{width:62px;text-align:center;padding:6px}
 "use strict";
 const LUNI=['Septembrie','Octombrie','Noiembrie','Decembrie','Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie'];
 const SEM1=['Septembrie','Octombrie','Noiembrie','Decembrie','Ianuarie'];
+/* Structura anului școlar 2026-2027 (OMEC 3194/2026), jud. Botoșani: vacanța mobilă 22–28 februarie 2027;
+   clasele a X-a filiera tehnologică / profesional se încheie pe 25 iunie 2027 */
+const MODULE=[
+  {n:1,de:'07.09.2026',pana:'23.10.2026',luni:['Septembrie','Octombrie']},
+  {n:2,de:'02.11.2026',pana:'22.12.2026',luni:['Noiembrie','Decembrie']},
+  {n:3,de:'11.01.2027',pana:'19.02.2027',luni:['Ianuarie','Februarie']},
+  {n:4,de:'01.03.2027',pana:'23.04.2027',luni:['Martie','Aprilie']},
+  {n:5,de:'05.05.2027',pana:'25.06.2027',luni:['Mai','Iunie']}];
+function modulLuna(l){return (MODULE.find(m=>m.luni.includes(l))||{}).n}
 const TIPURI=['Scutire','Cerere','Alte documente'];
 const KEY='absente-lunare-v1';
-const VIEWS=[['panou','Panou'],['absente','Absențe'],['documente','Documente'],['bursa','Bursă lunară'],['cereri','Cereri'],['anual','Situație anuală'],['elevi','Elevi'],['setari','Backup & setări']];
+const VIEWS=[['panou','Panou'],['absente','Absențe'],['documente','Documente'],['bursa','Bursă lunară'],['cereri','Cereri'],['module','Module'],['anual','Situație anuală'],['elevi','Elevi'],['setari','Backup & setări']];
 
 const SEED_NAMES=[];
 
@@ -109,7 +119,7 @@ function seed(){
   const elevi=SEED_NAMES.map(n=>({id:uid(),nume:n,burse:{teh:false,soc:false,rez:false}}));
     return {
     v:1,
-    settings:{an:'2026-2027',clasa:'X F',diriginte:'prof. BOTEZATU DANIEL',preluat:'',prag:10,limitaCereri:20,lunaCurenta:'Octombrie',doarBursieri:false},
+    settings:{an:'2026-2027',clasa:'X F',diriginte:'prof. BOTEZATU DANIEL',preluat:'',prag:10,limitaCereri:40,lunaCurenta:'Octombrie',doarBursieri:false},
     elevi,
     abs:{},
     docs:[
@@ -120,6 +130,7 @@ function seed(){
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
 if(!S||!S.elevi){S=seed();save(true)}
+if(!S.settings.limAn){if(S.settings.limitaCereri===20)S.settings.limitaCereri=40;S.settings.limAn=1;save(true)}
 let view='panou';
 try{view=localStorage.getItem(KEY+'-view')||'panou'}catch(e){}
 
@@ -156,6 +167,8 @@ function lunaStats(eid,luna){
     zile:[...sc,...ce,...al].reduce((x,d)=>x+zile(d),0),
     diff:('mot' in a)?mot-oreDoc:0,deTrecut:!('mot' in a)&&oreDoc>0};
 }
+function cereriAn(eid){return sumOre(S.docs.filter(d=>d.elevId===eid&&d.tip==='Cerere'))}
+function cereriMod(eid,m){return sumOre(S.docs.filter(d=>d.elevId===eid&&d.tip==='Cerere'&&modulLuna(d.luna)===m))}
 function cereriSem(eid,sem){return sumOre(S.docs.filter(d=>d.elevId===eid&&d.tip==='Cerere'&&(sem===1?SEM1.includes(d.luna):!SEM1.includes(d.luna))))}
 function bursier(e){return e.burse.teh||e.burse.soc||e.burse.rez}
 function burseTags(e){return (e.burse.teh?'<span class="tag">TEH</span>':'')+(e.burse.soc?'<span class="tag">SOC</span>':'')+(e.burse.rez?'<span class="tag">REZ</span>':'')}
@@ -171,7 +184,7 @@ document.getElementById('nav').addEventListener('click',e=>{const b=e.target.clo
 function render(){
   renderNav();
   for(const [k] of VIEWS){const el=document.getElementById('v-'+k);el.classList.toggle('hide',k!==view);el.innerHTML=''}
-  ({panou:rPanou,absente:rAbsente,documente:rDocumente,bursa:rBursa,cereri:rCereri,anual:rAnual,elevi:rElevi,setari:rSetari})[view](document.getElementById('v-'+view));
+  ({panou:rPanou,absente:rAbsente,documente:rDocumente,bursa:rBursa,cereri:rCereri,module:rModule,anual:rAnual,elevi:rElevi,setari:rSetari})[view](document.getElementById('v-'+view));
 }
 function setLuna(l){S.settings.lunaCurenta=l;save(true);render()}
 
@@ -189,7 +202,7 @@ function rPanou(el){
     const st=lunaStats(e.id,L);tot+=st.total;nem+=st.nem;mot+=st.mot;
     if(pierde(st))pierd.push([e,st]);else if(st.nem>=S.settings.prag-2&&st.nem>0)aproape.push([e,st]);
     if(st.diff!==0)dif.push([e,st]);if(st.deTrecut)deT.push([e,st]);
-    for(const s of [1,2]){const c=cereriSem(e.id,s);if(c>S.settings.limitaCereri)cer.push([e,s,c])}
+    {const c=cereriAn(e.id),L2=S.settings.limitaCereri;if(c>L2)cer.push([e,'bad',c]);else if(c>=L2*0.75)cer.push([e,'warn',c])}
   }
   const bk=S.lastBackup?new Date(S.lastBackup):null;
   const zileBk=bk?Math.floor((Date.now()-bk)/864e5):null;
@@ -205,7 +218,7 @@ function rPanou(el){
   <div class="card"><h2>De urmărit</h2>
     ${pierd.map(([e,st])=>`<div class="alert bad">${esc(e.nume)}${burseTags(e)} — ${st.nem} nemotivate: <b>nu îndeplinește condițiile de bursă</b></div>`).join('')}
     ${aproape.map(([e,st])=>`<div class="alert warn">${esc(e.nume)}${burseTags(e)} — ${st.nem} nemotivate, aproape de prag (${S.settings.prag})</div>`).join('')}
-    ${cer.map(([e,s,c])=>`<div class="alert warn">${esc(e.nume)} — ${c} ore motivate pe cereri în semestrul ${s===1?'I':'II'} (limita ROFUIP: ${S.settings.limitaCereri})</div>`).join('')}
+    ${cer.map(([e,k,c])=>`<div class="alert ${k}">${esc(e.nume)} — ${oreTxt(c)} motivate pe cereri în acest an școlar ${k==='bad'?'— <b>a depășit limita</b>':'— mai are '+oreTxt(S.settings.limitaCereri-c)}  (limita: ${S.settings.limitaCereri}/an)</div>`).join('')}
     ${dif.map(([e,st])=>`<div class="alert warn"><b>${esc(e.nume)}</b> — în catalog ai trecut <b>${oreTxt(st.mot)}</b> motivate, dar în jurnal are documente pentru <b>${oreTxt(st.oreDoc)}</b>. Verifică ${st.diff>0?'dacă lipsește un document':'orele trecute în catalog'}.</div>`).join('')}
     ${deT.length?`<div class="alert info">${deT.length===1?'Un elev are':deT.length+' elevi au'} documente înregistrate, dar încă n-ai trecut motivatele din catalog (${deT.map(([e])=>esc(e.nume.split(' ')[0])).join(', ')}). La <b>Absențe</b> apasă „Completează motivatele din documente”.</div>`:''}
     ${!pierd.length&&!aproape.length&&!cer.length&&!dif.length&&!deT.length?'<div class="alert ok">Nimic de semnalat pentru '+L.toLowerCase()+'.</div>':''}
@@ -283,7 +296,7 @@ function rDocumente(el){
     if(d.start&&d.end&&d.end<d.start){el.querySelector('#dMsg').innerHTML='<div class="alert bad">Data de sfârșit e înaintea celei de început.</div>';return}
     if(ed){S.docs[S.docs.findIndex(x=>x.id===ed.id)]=d;editId=null}else S.docs.push(d);save();
     let warn='';
-    if(d.tip==='Cerere'){const s=SEM1.includes(d.luna)?1:2,c=cereriSem(d.elevId,s);if(c>S.settings.limitaCereri)warn=`<div class="alert warn">Atenție: elevul are acum ${c} ore pe cereri în semestrul ${s===1?'I':'II'} (limita ${S.settings.limitaCereri}).</div>`}
+    if(d.tip==='Cerere'){const c=cereriAn(d.elevId),L2=S.settings.limitaCereri;if(c>L2)warn=`<div class="alert bad">Atenție: elevul are acum ${oreTxt(c)} motivate pe cereri în acest an școlar (limita ${L2}).</div>`;else if(c>=L2*0.75)warn=`<div class="alert warn">Elevul are ${oreTxt(c)} pe cereri în acest an școlar; mai poate motiva ${oreTxt(L2-c)}.</div>`}
     const keepE=d.elevId,keepL=d.luna;render();
     const v=document.getElementById('v-documente');v.querySelector('#dE').value=keepE;v.querySelector('#dL').value=keepL;v.querySelector('#dMsg').innerHTML=(ed?'<div class="alert ok">Documentul a fost modificat.</div>':'')+warn;
   };
@@ -317,7 +330,7 @@ function rBursa(el){
       <p>• Total absențe = numărul total de absențe acumulat de elev în luna pentru care se realizează monitorizarea;<br>
       • Total absențe motivate pe bază de scutiri medicale = numărul de absențe motivate cu scutiri medicale pentru luna respectivă;<br>
       • Total absențe motivate pe bază de cereri = numărul de absențe motivate cu cereri aprobate pentru luna respectivă;<br>
-      • Conform ROFUIP elevul poate beneficia de motivarea a cel mult ${set.limitaCereri} ore de curs pe semestru pe bază de cereri scrise ale părinților/tutorelui legal/elevului major.</p>
+      • Conform ROFUIP elevul poate beneficia de motivarea a cel mult ${set.limitaCereri} de ore de curs pe an școlar pe bază de cereri scrise ale părinților/tutorelui legal/elevului major.</p>
       <p>Subsemnata/Subsemnatul ${esc(set.preluat)} am preluat:<br>– Macheta de monitorizare a absențelor;<br>– Referat pentru retragerea bursei adresat Comisiei de monitorizare;<br>
       <b>${T.nrCe}</b> : cereri de motivare a absențelor aprobate de director;<br><b>${T.nrSc}</b> : scutiri medicale;<br><b>${T.nrAl}</b> : alte motive.</p>
       <table style="border:none;margin-top:14px"><tr><td style="border:none;text-align:left;width:50%">${esc(set.preluat)}</td><td style="border:none;text-align:left">Diriginte,<br>${esc(set.diriginte)}</td></tr></table>
@@ -331,14 +344,34 @@ function printBursa(){const s=document.getElementById('v-bursa');s.classList.add
 /* ---------- CERERI ---------- */
 function rCereri(el){
   const lim=S.settings.limitaCereri;
-  const rows=S.elevi.map((e,i)=>{
-    const vals=LUNI.map(l=>sumOre(docsOf(e.id,l,'Cerere')));
-    const s1=cereriSem(e.id,1),s2=cereriSem(e.id,2);
-    const c=v=>v>lim?'cbad':v>=lim*0.75?'cwarn':'';
-    return `<tr><td>${i+1}</td><td class="n">${esc(e.nume)}</td>${vals.map(v=>`<td>${blank(v)}</td>`).join('')}<td class="${c(s1)}"><b>${blank(s1)}</b></td><td class="${c(s2)}"><b>${blank(s2)}</b></td><td><b>${blank(s1+s2)}</b></td></tr>`}).join('');
+  const c=v=>v>lim?'cbad':v>=lim*0.75?'cwarn':'';
+  const rows=S.elevi.map((e,i)=>{const t=cereriAn(e.id);
+    return `<tr><td>${i+1}</td><td class="n">${esc(e.nume)}</td>${MODULE.map(m=>`<td>${blank(cereriMod(e.id,m.n))}</td>`).join('')}<td class="${c(t)}"><b>${blank(t)}</b></td><td>${t>lim?'<span class="bad">depășit</span>':lim-t}</td></tr>`}).join('');
   el.innerHTML=`<div class="card"><h2>Absențe motivate pe bază de cereri</h2>
-  <p class="muted">Se calculează singur din „Documente”. Limita ROFUIP: ${lim} ore pe semestru (sem. I: septembrie–ianuarie, sem. II: februarie–iunie). Galben = peste 75% din limită, roșu = depășită.</p>
-  <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th>${LUNI.map(l=>`<th>${l.slice(0,3).toUpperCase()}</th>`).join('')}<th>Sem. I</th><th>Sem. II</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  <p class="muted">Se calculează singur din „Documente”. Elevul poate motiva pe bază de cereri cel mult <b>${lim} de ore pe an școlar</b>. Galben = peste 75% din limită, roșu = depășită.</p>
+  <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th>${MODULE.map(m=>`<th>Modulul ${m.n}</th>`).join('')}<th>Total an</th><th>Mai poate motiva</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+
+/* ---------- MODULE ---------- */
+let modSel=0;
+function rModule(el){
+  const P=S.settings.prag;
+  const mods=modSel?MODULE.filter(m=>m.n===modSel):MODULE;
+  const ms=(eid,m)=>{let mot=0,nem=0;for(const l of m.luni){const st=lunaStats(eid,l);mot+=st.mot;nem+=st.nem}return {mot,nem,tot:mot+nem,cer:cereriMod(eid,m.n)}};
+  const T={};
+  const rows=S.elevi.map((e,i)=>{let sum={mot:0,nem:0,tot:0};
+    const cells=mods.map(m=>{const x=ms(e.id,m);T[m.n]=T[m.n]||{mot:0,nem:0,tot:0,cer:0};for(const k in T[m.n])T[m.n][k]+=x[k];sum.mot+=x.mot;sum.nem+=x.nem;sum.tot+=x.tot;
+      return `<td>${blank(x.mot)}</td><td>${blank(x.nem)}</td><td><b>${blank(x.tot)}</b></td><td>${blank(x.cer)}</td>`}).join('');
+    return `<tr><td>${i+1}</td><td class="n">${esc(e.nume)}</td>${cells}${modSel?'':`<td><b>${sum.tot}</b></td><td>${sum.nem}</td>`}</tr>`}).join('');
+  el.innerHTML=`<div class="card"><h2>Absențe pe module</h2>
+  <div class="row noprint" style="margin-bottom:10px"><b>Modul:</b><select id="mS"><option value="0">Toate modulele</option>${MODULE.map(m=>`<option value="${m.n}" ${m.n===modSel?'selected':''}>Modulul ${m.n} (${m.de} – ${m.pana})</option>`).join('')}</select></div>
+  <div class="tw" style="margin-bottom:12px"><table><thead><tr><th>Modul</th><th>Perioada</th><th>Lunile</th></tr></thead><tbody>
+  ${MODULE.map(m=>`<tr><td><b>Modulul ${m.n}</b></td><td>${m.de} – ${m.pana}</td><td>${m.luni.join(', ')}</td></tr>`).join('')}</tbody></table>
+  <p class="muted">Structura anului școlar 2026-2027 (OMEC nr. 3194/2026), cu vacanța de februarie stabilită de ISJ Botoșani: 22–28 februarie 2027. Fiecare lună cade în întregime într-un singur modul, așa că totalurile se fac din absențele lunare. M = motivate, N = nemotivate, T = total, C = ore motivate pe cereri.</p></div>
+  <div class="tw"><table><thead><tr><th rowspan="2">Nr.</th><th rowspan="2">Numele și prenumele</th>${mods.map(m=>`<th colspan="4">MODULUL ${m.n}</th>`).join('')}${modSel?'':'<th rowspan="2">TOTAL AN</th><th rowspan="2">NEMOT. AN</th>'}</tr>
+  <tr>${mods.map(()=>'<th>M</th><th>N</th><th>T</th><th>C</th>').join('')}</tr></thead>
+  <tbody>${rows}<tr class="tot"><td></td><td class="n">TOTAL</td>${mods.map(m=>{const t=T[m.n]||{mot:0,nem:0,tot:0,cer:0};return `<td>${t.mot}</td><td>${t.nem}</td><td>${t.tot}</td><td>${t.cer}</td>`}).join('')}${modSel?'':`<td>${mods.reduce((a,m)=>a+(T[m.n]?T[m.n].tot:0),0)}</td><td>${mods.reduce((a,m)=>a+(T[m.n]?T[m.n].nem:0),0)}</td>`}</tr></tbody></table></div></div>`;
+  el.querySelector('#mS').onchange=e=>{modSel=+e.target.value;render()};
 }
 
 /* ---------- ANUAL ---------- */
@@ -394,7 +427,7 @@ function rSetari(el){
     <label>Diriginte<input type="text" data-s="diriginte" value="${esc(s.diriginte)}"></label>
     <label>Persoana care preia macheta<input type="text" data-s="preluat" value="${esc(s.preluat)}"></label>
     <label>Pierde bursa de la (nemotivate/lună)<input type="number" min="1" data-s="prag" value="${s.prag}"></label>
-    <label>Limită ore pe cereri/semestru<input type="number" min="1" data-s="limitaCereri" value="${s.limitaCereri}"></label>
+    <label>Limită ore pe cereri / an școlar<input type="number" min="1" data-s="limitaCereri" value="${s.limitaCereri}"></label>
   </div></div>
   <div class="card"><h2>An școlar nou</h2><p class="muted">Șterge absențele și documentele, dar păstrează elevii și setările. Fă întâi un export!</p>
     <button class="btn del" id="reset" style="padding:8px 14px">Golește absențele și documentele</button></div>`;
@@ -489,8 +522,11 @@ function exportXlsx(){
     sheets.push({name:'BURSĂ '+L.toUpperCase(),rows,boldRows:[0,1,3,rows.length-1],widths:[5,32,12,9,11,10,10,11,8,8,8,9,14]});
   });
   // 4. Cereri
-  sheets.push({name:'CERERI',head:1,widths:[5,32,...Array(LUNI.length).fill(7),9,9,9],rows:[['Nr.','Numele și prenumele',...LUNI.map(l=>l.slice(0,3).toUpperCase()),'Sem. I','Sem. II','Total'],
-    ...S.elevi.map((e,i)=>{const s1=cereriSem(e.id,1),s2=cereriSem(e.id,2);return [i+1,e.nume,...LUNI.map(l=>z(sumOre(docsOf(e.id,l,'Cerere')))),z(s1),z(s2),z(s1+s2)]})]});
+  sheets.push({name:'CERERI',head:1,widths:[5,32,10,10,10,10,10,10,12],rows:[['Nr.','Numele și prenumele',...MODULE.map(m=>'Modulul '+m.n),'Total an','Mai poate motiva'],
+    ...S.elevi.map((e,i)=>{const t=cereriAn(e.id);return [i+1,e.nume,...MODULE.map(m=>z(cereriMod(e.id,m.n))),z(t),Math.max(0,S.settings.limitaCereri-t)]})]});
+  {const h1=['Nr.','Numele și prenumele'],h2=['',''],mg=['A1:A2','B1:B2'];MODULE.forEach((m,j)=>{h1.push('MODULUL '+m.n+' ('+m.de+' – '+m.pana+')','','','');h2.push('MOT.','NEMOT.','TOTAL','CERERI');const c=2+j*4;mg.push(colL(c)+'1:'+colL(c+3)+'1')});
+   const rows=[h1,h2];S.elevi.forEach((e,i)=>{const r=[i+1,e.nume];MODULE.forEach(m=>{let mo=0,ne=0;m.luni.forEach(l=>{const st=lunaStats(e.id,l);mo+=st.mot;ne+=st.nem});r.push(z(mo),z(ne),z(mo+ne),z(cereriMod(e.id,m.n)))});rows.push(r)});
+   sheets.push({name:'MODULE',rows,head:2,merges:mg,widths:[5,32,...Array(20).fill(8)]});}
   // 5. Elevi & burse
   sheets.push({name:'ELEVI ȘI BURSE',head:1,widths:[5,32,12,12,12],rows:[['Nr.','Numele și prenumele','Bursă tehnologică','Bursă socială','Bursă reziliență'],
     ...S.elevi.map((e,i)=>[i+1,e.nume,e.burse.teh?'DA':'',e.burse.soc?'DA':'',e.burse.rez?'DA':''])]});
