@@ -1,6 +1,6 @@
 // Service worker pentru Absențe lunare — face aplicația disponibilă offline,
 // oricât timp a trecut de la ultima deschidere cu internet.
-const CACHE_NAME = 'absente-lunare-cache-v4';
+const CACHE_NAME = 'absente-lunare-cache-v5';
 const FILES_DE_CACHE = [
   './',
   './index.html',

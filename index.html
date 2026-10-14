@@ -243,12 +243,15 @@ function rAbsente(el){
       <td><b data-t="${e.id}">${blank(st.total)}</b></td><td>${blank(st.oreDoc)}</td><td data-c="${e.id}">${chk}</td></tr>`}).join('');
   el.innerHTML=`<div class="card">
     <div class="row noprint" style="margin-bottom:10px"><b>Luna:</b>${lunaSel('aL',L)}
-      <label class="btn">Importă din catalogul electronic (Excel)<input type="file" id="xImp" accept=".xlsx" class="hide"></label></div>
+      <label class="btn">Importă din catalogul electronic (Excel)<input type="file" id="xImp" accept=".xlsx" class="hide"></label>
+      <button class="btn del" id="clrM" style="padding:8px 14px">Golește luna</button></div>
     <div id="xMsg"></div>
     <p class="muted">La sfârșit de lună apasă „Importă din catalogul electronic” și alege raportul lunar descărcat (ex. SEPTEMBRIE.xlsx) — luna se recunoaște singură din fișier. Poți corecta și de mână în tabel. Treci absențele din catalog: motivate (M) și nemotivate (N). Coloana „Documente” arată câte ore acoperă cererile/scutirile înregistrate — dacă nu se potrivește cu M, apare ⚠.</p>
     <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th><th>Motivate</th><th>Nemotivate</th><th>Total</th><th>Documente (ore)</th><th>Verificare</th></tr></thead>
     <tbody>${rows}<tr class="tot"><td></td><td class="n">TOTAL</td><td id="tm">${tm}</td><td id="tn">${tn}</td><td id="tt">${tm+tn}</td><td></td><td></td></tr></tbody></table></div></div>`;
   el.querySelector('#aL').onchange=e=>setLuna(e.target.value);
+  el.querySelector('#clrM').onclick=()=>{if(!confirm(`Ștergi toate absențele trecute la ${L.toLowerCase()}? Documentele din jurnal rămân.`))return;
+    for(const id in S.abs)delete S.abs[id][L];save(true);render();toast('Luna a fost golită')};
   el.querySelector('#xImp').onchange=async ev=>{const f=ev.target.files[0];ev.target.value='';if(!f)return;
     const box=document.getElementById('xMsg');
     try{const rez=importCatalog(await readXlsx(await f.arrayBuffer()));
