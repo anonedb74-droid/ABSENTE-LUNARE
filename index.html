@@ -267,7 +267,8 @@ function rAbsente(el){
 }
 
 /* ---------- DOCUMENTE ---------- */
-let docFilter={luna:'',elev:''};let editId=null;
+function lunaAzi(){const n=['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'][new Date().getMonth()];return LUNI.includes(n)?n:S.settings.lunaCurenta}
+let docFilter={luna:lunaAzi(),elev:''};let editId=null;
 function rDocumente(el){
   const opts=S.elevi.map(e=>`<option value="${e.id}">${esc(e.nume)}</option>`).join('');
   const list=S.docs.filter(d=>(!docFilter.luna||d.luna===docFilter.luna)&&(!docFilter.elev||d.elevId===docFilter.elev))
@@ -278,7 +279,7 @@ function rDocumente(el){
   el.innerHTML=`<div class="card noprint" id="dForm" ${ed?'style="border:2px solid var(--pri)"':''}><h2>${ed?'Modifică documentul':'Înregistrează un document'}</h2>
     <div class="form">
       <label>Elev<select id="dE">${opts}</select></label>
-      <label>Luna${lunaSel('dL',S.settings.lunaCurenta)}</label>
+      <label>Luna${lunaSel('dL',docFilter.luna||lunaAzi())}</label>
       <label>Document<select id="dT">${TIPURI.map(t=>`<option>${t}</option>`).join('')}</select></label>
       <label>Nr. înregistrare<input type="text" id="dN" placeholder="ex. 10808/09.10.2026"></label>
       <label>Data început<input type="date" id="dS"></label>
