@@ -243,11 +243,24 @@ function rAbsente(el){
       <td><b data-t="${e.id}">${blank(st.total)}</b></td><td>${blank(st.oreDoc)}</td><td data-c="${e.id}">${chk}</td></tr>`}).join('');
   el.innerHTML=`<div class="card">
     <div class="row noprint" style="margin-bottom:10px"><b>Luna:</b>${lunaSel('aL',L)}
+      <label class="btn">Importă din catalogul electronic (Excel)<input type="file" id="xImp" accept=".xlsx" class="hide"></label>
       <button class="btn sec" id="fill">Completează motivatele din documente</button></div>
-    <p class="muted">Treci absențele din catalog: motivate (M) și nemotivate (N). Coloana „Documente” arată câte ore acoperă cererile/scutirile înregistrate — dacă nu se potrivește cu M, apare ⚠.</p>
+    <div id="xMsg"></div>
+    <p class="muted">La sfârșit de lună apasă „Importă din catalogul electronic” și alege raportul lunar descărcat (ex. SEPTEMBRIE.xlsx) — luna se recunoaște singură din fișier. Poți corecta și de mână în tabel. Treci absențele din catalog: motivate (M) și nemotivate (N). Coloana „Documente” arată câte ore acoperă cererile/scutirile înregistrate — dacă nu se potrivește cu M, apare ⚠.</p>
     <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th><th>Motivate</th><th>Nemotivate</th><th>Total</th><th>Documente (ore)</th><th>Verificare</th></tr></thead>
     <tbody>${rows}<tr class="tot"><td></td><td class="n">TOTAL</td><td id="tm">${tm}</td><td id="tn">${tn}</td><td id="tt">${tm+tn}</td><td></td><td></td></tr></tbody></table></div></div>`;
   el.querySelector('#aL').onchange=e=>setLuna(e.target.value);
+  el.querySelector('#xImp').onchange=async ev=>{const f=ev.target.files[0];ev.target.value='';if(!f)return;
+    const box=document.getElementById('xMsg');
+    try{const rez=importCatalog(await readXlsx(await f.arrayBuffer()));
+      if(rez.lipsa.length&&confirm(`Acești elevi din fișier nu sunt în aplicație:\n${rez.lipsa.join('\n')}\n\nÎi adaug în lista clasei?`)){
+        for(const n of rez.lipsa)S.elevi.push({id:uid(),nume:n,burse:{teh:false,soc:false,rez:false}});
+        S.elevi.sort((a,b)=>a.nume.localeCompare(b.nume,'ro'));Object.assign(rez,importCatalog(rez.grid),{adaugati:rez.lipsa.length});}
+      S.settings.lunaCurenta=rez.luni[rez.luni.length-1];save(true);render();
+      document.getElementById('xMsg').innerHTML=`<div class="alert ok">Importat din catalog: <b>${rez.luni.join(', ')}</b> — ${rez.n} elevi${rez.adaugati?`, din care ${rez.adaugati} adăugați nou`:''}. Total: ${rez.mot} motivate, ${rez.nem} nemotivate.</div>`+
+        (rez.lipsa.length&&!rez.adaugati?`<div class="alert warn">Nu au fost importați (nu sunt în lista clasei): ${rez.lipsa.map(esc).join(', ')}</div>`:'')+
+        (rez.nuSunt.length?`<div class="alert info">Elevi din aplicație care nu apar în fișier: ${rez.nuSunt.map(esc).join(', ')}</div>`:'');
+    }catch(e){box.innerHTML=`<div class="alert bad">Nu am putut citi fișierul: ${esc(e.message)}</div>`}};
   el.querySelector('#fill').onclick=()=>{
     let n=0;for(const e of S.elevi){const st=lunaStats(e.id,L);if(st.oreDoc&&!('mot' in absOf(e.id,L))){setAbs(e.id,L,'mot',st.oreDoc);n++}}
     save(true);render();toast(n?`Completat la ${n} elevi`:'Nimic de completat (motivatele sunt deja trecute)');
@@ -452,6 +465,44 @@ function mergeData(d){
     const old=S.docs.find(o=>o.elevId===e.id&&o.luna===doc.luna&&o.nr&&o.nr===doc.nr&&o.tip===doc.tip);
     if(old){Object.assign(old,doc);upd++}else{S.docs.push({id:uid(),...doc});add++}}
   return {abs,add,upd,miss:[...miss]};
+}
+/* ---------- IMPORT EXCEL DIN CATALOGUL ELECTRONIC (cititor .xlsx fără biblioteci) ---------- */
+async function inflate(u8){const ds=new DecompressionStream('deflate-raw');const w=ds.writable.getWriter();w.write(u8);w.close();return new Uint8Array(await new Response(ds.readable).arrayBuffer())}
+async function unzipEntries(buf){
+  const u=new Uint8Array(buf),dv=new DataView(buf);let e=u.length-22;
+  while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('nu e un fișier Excel (.xlsx)');
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const out={},dec=new TextDecoder();
+  for(let i=0;i<n;i++){const meth=dv.getUint16(p+10,true),csz=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+    const name=dec.decode(u.subarray(p+46,p+46+nl));const lnl=dv.getUint16(lo+26,true),lxl=dv.getUint16(lo+28,true);const data=u.subarray(lo+30+lnl+lxl,lo+30+lnl+lxl+csz);
+    out[name]={meth,data};p+=46+nl+xl+cl}
+  return {get:async nm=>{const f=out[nm];if(!f)return null;const b=f.meth===8?await inflate(f.data):f.data;return dec.decode(b)},names:Object.keys(out)};
+}
+async function readXlsx(buf){
+  const z=await unzipEntries(buf),P=new DOMParser();
+  const ss=[];const sx=await z.get('xl/sharedStrings.xml');
+  if(sx){const d=P.parseFromString(sx,'application/xml');for(const si of d.getElementsByTagName('si'))ss.push([...si.getElementsByTagName('t')].map(t=>t.textContent).join(''))}
+  const sheet=z.names.filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort()[0];if(!sheet)throw new Error('fișierul nu are nicio foaie');
+  const d=P.parseFromString(await z.get(sheet),'application/xml');const grid=[];
+  for(const c of d.getElementsByTagName('c')){const m=/^([A-Z]+)(\d+)$/.exec(c.getAttribute('r')||'');if(!m)continue;
+    let col=0;for(const ch of m[1])col=col*26+ch.charCodeAt(0)-64;const row=+m[2];const t=c.getAttribute('t');
+    const v=c.getElementsByTagName('v')[0];let val=v?v.textContent:'';
+    if(t==='s')val=ss[+val]??'';else if(t==='inlineStr')val=[...c.getElementsByTagName('t')].map(x=>x.textContent).join('');else if(t!=='str'&&val!=='')val=+val;
+    (grid[row-1]=grid[row-1]||[])[col-1]=val}
+  return grid;
+}
+function importCatalog(grid){
+  const low=v=>String(v??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const hr=grid.findIndex(r=>r&&r.some(v=>low(v)==='nume')&&r.some(v=>/nemotivate/.test(low(v))));
+  if(hr<0)throw new Error('nu găsesc capul de tabel (coloanele „Nume” și „… nemotivate”)');
+  const H=grid[hr],ci=H.findIndex(v=>low(v)==='nume');const cols=[];
+  H.forEach((v,j)=>{const h=low(v);for(const L of LUNI){const l=low(L);if(h===l+' motivate')cols.push({L,k:'mot',j});if(h===l+' nemotivate')cols.push({L,k:'nem',j})}});
+  if(!cols.length)throw new Error('nu găsesc coloane de tipul „Septembrie motivate / nemotivate”');
+  const luni=[...new Set(cols.map(c=>c.L))].sort((a,b)=>LUNI.indexOf(a)-LUNI.indexOf(b));
+  const find=n=>S.elevi.find(e=>normN(e.nume)===normN(n));const lipsa=[],gasiti=new Set();let n=0,mot=0,nem=0;
+  for(let r=hr+1;r<grid.length;r++){const row=grid[r];if(!row)continue;const nume=String(row[ci]??'').trim();
+    if(!nume||low(nume)==='total')continue;const e=find(nume);if(!e){lipsa.push(nume.toUpperCase());continue}
+    gasiti.add(e.id);n++;for(const c of cols){const v=num(row[c.j]);setAbs(e.id,c.L,c.k,v);if(c.k==='mot')mot+=v;else nem+=v}}
+  return {grid,luni,n,mot,nem,lipsa,nuSunt:S.elevi.filter(e=>!gasiti.has(e.id)).map(e=>e.nume)};
 }
 /* ---------- EXPORT ---------- */
 function stamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`}
