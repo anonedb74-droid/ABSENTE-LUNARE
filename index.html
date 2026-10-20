@@ -49,7 +49,8 @@ td.n{text-align:left;white-space:nowrap}
 tr.tot td{font-weight:700;background:var(--head)}
 td input[type=number]{width:62px;text-align:center;padding:3px 6px}
 .ok{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}
-.cbad{background:var(--badbg)}.cwarn{background:var(--warnbg)}.cok{background:var(--okbg)}
+.cbad{background:var(--badbg)}
+tr.rinc td{background:#fde2e1!important;color:#b71c1c;-webkit-print-color-adjust:exact;print-color-adjust:exact}tr.rinc td.n{font-weight:700}.lipsa{color:#b71c1c;font-weight:700;font-style:italic}.cwarn{background:var(--warnbg)}.cok{background:var(--okbg)}
 .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;background:var(--pri2);color:var(--pri);margin-left:4px;font-weight:600}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
 .stat{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--pri);border-radius:12px;padding:12px 14px}
@@ -157,6 +158,8 @@ function setAbs(eid,luna,k,v){
   if(v===''||v===null)delete S.abs[eid][luna][k];else S.abs[eid][luna][k]=Math.max(0,num(v));
 }
 function docsOf(eid,luna,tip){return S.docs.filter(d=>d.elevId===eid&&(!luna||d.luna===luna)&&(!tip||d.tip===tip))}
+// Document incomplet = fără nr. de înregistrare sau fără ore motivate; apare cu roșu până îl completezi.
+function docLipsuri(d){const l=[];if(!String(d.nr||'').trim())l.push('nr. înregistrare');if(!num(d.ore))l.push('ore motivate');return l}
 function sumOre(list){return list.reduce((a,d)=>a+num(d.ore),0)}
 function zile(d){
   if(!d.start&&!d.end)return 0;const a=new Date(d.start||d.end),b=new Date(d.end||d.start);
@@ -226,8 +229,9 @@ function rPanou(el){
     ${aproape.map(([e,st])=>`<div class="alert warn">${esc(e.nume)}${burseTags(e)} — ${st.nem} nemotivate, aproape de prag (${S.settings.prag})</div>`).join('')}
     ${cer.map(([e,k,c])=>`<div class="alert ${k}">${esc(e.nume)} — ${oreTxt(c)} motivate pe cereri în acest an școlar ${k==='bad'?'— <b>a depășit limita</b>':'— mai are '+oreTxt(S.settings.limitaCereri-c)}  (limita: ${S.settings.limitaCereri}/an)</div>`).join('')}
     ${dif.map(([e,st])=>`<div class="alert warn"><b>${esc(e.nume)}</b> — în catalog ai trecut <b>${oreTxt(st.mot)}</b> motivate, dar în jurnal are documente pentru <b>${oreTxt(st.oreDoc)}</b>. Verifică ${st.diff>0?'dacă lipsește un document':'orele trecute în catalog'}.</div>`).join('')}
+    ${(()=>{const inc=S.docs.filter(d=>d.luna===L&&docLipsuri(d).length);return inc.length?`<div class="alert bad"><b>${inc.length===1?'Un document':inc.length+' documente'} din ${L.toLowerCase()} ${inc.length===1?'e incomplet':'sunt incomplete'}</b> (fără nr. de înregistrare sau fără ore): ${inc.map(d=>esc((S.elevi.find(e=>e.id===d.elevId)||{nume:'?'}).nume)+' — '+esc(d.tip)+' ('+docLipsuri(d).join(', ')+')').join('; ')}. Le completezi la <b>Documente</b> → Modifică.</div>`:''})()}
     ${deT.length?`<div class="alert info">Absențele din ${L.toLowerCase()} nu sunt încă importate din catalogul electronic (${deT.length===1?'un elev are':deT.length+' elevi au'} deja documente în jurnal). La sfârșitul lunii mergi la <b>Absențe</b> → <b>Importă din catalogul electronic</b>.</div>`:''}
-    ${!pierd.length&&!aproape.length&&!cer.length&&!dif.length&&!deT.length?'<div class="alert ok">Nimic de semnalat pentru '+L.toLowerCase()+'.</div>':''}
+    ${!pierd.length&&!aproape.length&&!cer.length&&!dif.length&&!deT.length&&!S.docs.some(d=>d.luna===L&&docLipsuri(d).length)?'<div class="alert ok">Nimic de semnalat pentru '+L.toLowerCase()+'.</div>':''}
   </div>
   <div class="card"><h2>Salvare de rezervă</h2>
     <div class="alert ${zileBk===null||zileBk>7?'warn':'ok'}">${bk?'Ultima salvare de rezervă: '+bk.toLocaleDateString('ro-RO')+' ('+zileBk+' zile în urmă).':'Nu ai făcut încă nicio salvare de rezervă.'} Datele stau doar în acest browser — exportă des în Excel și JSON.</div>
@@ -290,27 +294,26 @@ function rDocumente(el){
       <label>Nr. înregistrare<input type="text" id="dN" placeholder="ex. 10808/09.10.2026"></label>
       <label>Data început<input type="date" id="dS"></label>
       <label>Data sfârșit<input type="date" id="dF" title="Pentru o singură zi, completează doar una dintre date"></label>
-      <label>Nr. ore motivate<input type="number" id="dO" min="1" inputmode="numeric"></label>
+      <label>Nr. ore motivate<input type="number" id="dO" min="0" inputmode="numeric" placeholder="poate rămâne gol"></label>
       <div class="row"><button class="btn" id="dAdd">${ed?'Salvează modificările':'Adaugă'}</button>${ed?'<button class="btn sec" id="dCancel">Renunță</button>':''}</div>
-    </div><p class="muted" style="margin:8px 0 0">Scutire de o singură zi: completează doar una dintre date (început sau sfârșit) — se socotește 1 zi.</p><div id="dMsg"></div></div>
+    </div><p class="muted" style="margin:8px 0 0">Scutire de o singură zi: completează doar una dintre date (început sau sfârșit) — se socotește 1 zi. Poți înregistra documentul și <b>fără nr. de înregistrare sau fără ore</b> — apare cu <span class="lipsa">roșu</span> până îl completezi (apeși „Modifică”).</p><div id="dMsg"></div></div>
   <div class="card"><h2>Jurnal documente</h2>
     <div class="row noprint" style="margin-bottom:10px">
       <select id="fL"><option value="">Toate lunile</option>${LUNI.map(l=>`<option ${l===docFilter.luna?'selected':''}>${l}</option>`).join('')}</select>
       <select id="fE"><option value="">Toți elevii</option>${S.elevi.map(e=>`<option value="${e.id}" ${e.id===docFilter.elev?'selected':''}>${esc(e.nume)}</option>`).join('')}</select>
-      <span class="muted">${list.length} documente · ${sumOre(list)} ore</span></div>
+      <span class="muted">${list.length} documente · ${sumOre(list)} ore${list.filter(d=>docLipsuri(d).length).length?` · <span class="lipsa">${(n=>n===1?'1 incomplet':n+' incomplete')(list.filter(d=>docLipsuri(d).length).length)} (cu roșu)</span>`:''}</span></div>
     <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th><th>Luna</th><th>Document</th><th>Nr. înregistrare</th><th>Început</th><th>Sfârșit</th><th>Ore</th><th class="noprint"></th></tr></thead>
-    <tbody>${list.map((d,i)=>`<tr><td>${i+1}</td><td class="n">${esc(nume(d.elevId))}</td><td>${d.luna}</td><td class="${d.tip==='Cerere'?'cwarn':''}">${d.tip}</td><td>${esc(d.nr)}</td><td>${fd(d.start)}</td><td>${fd(d.end)}</td><td><b>${d.ore}</b></td><td class="noprint" style="white-space:nowrap"><button class="btn sec" style="padding:4px 9px" data-ed="${d.id}">Modifică</button> <button class="btn del" data-del="${d.id}">Șterge</button></td></tr>`).join('')||'<tr><td colspan="9" class="muted">Niciun document.</td></tr>'}</tbody></table></div></div>`;
+    <tbody>${list.map((d,i)=>{const lp=docLipsuri(d);return `<tr class="${lp.length?'rinc':''}" ${lp.length?`title="Lipsește: ${lp.join(', ')}"`:''}><td>${i+1}</td><td class="n">${esc(nume(d.elevId))}</td><td>${d.luna}</td><td class="${d.tip==='Cerere'?'cwarn':''}">${d.tip}</td><td>${String(d.nr||'').trim()?esc(d.nr):'<span class="lipsa">fără nr.</span>'}</td><td>${fd(d.start)}</td><td>${fd(d.end)}</td><td>${num(d.ore)?`<b>${d.ore}</b>`:'<span class="lipsa">—</span>'}</td><td class="noprint" style="white-space:nowrap"><button class="btn sec" style="padding:4px 9px" data-ed="${d.id}">Modifică</button> <button class="btn del" data-del="${d.id}">Șterge</button></td></tr>`}).join('')||'<tr><td colspan="9" class="muted">Niciun document.</td></tr>'}</tbody></table></div></div>`;
   el.querySelector('#fL').onchange=e=>{docFilter.luna=e.target.value;render()};
   el.querySelector('#fE').onchange=e=>{docFilter.elev=e.target.value;render()};
   if(ed){const f=el.querySelector('#dForm');f.querySelector('#dE').value=ed.elevId;f.querySelector('#dL').value=ed.luna;f.querySelector('#dT').value=ed.tip;
-    f.querySelector('#dN').value=ed.nr||'';f.querySelector('#dS').value=ed.start||'';f.querySelector('#dF').value=ed.end||'';f.querySelector('#dO').value=ed.ore;
+    f.querySelector('#dN').value=ed.nr||'';f.querySelector('#dS').value=ed.start||'';f.querySelector('#dF').value=ed.end||'';f.querySelector('#dO').value=num(ed.ore)?ed.ore:'';
     f.querySelector('#dCancel').onclick=()=>{editId=null;render()};}
   el.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>{editId=b.dataset.ed;render();document.getElementById('dForm').scrollIntoView({behavior:'smooth'})});
   el.querySelector('#dAdd').onclick=()=>{
     const d={id:ed?ed.id:uid(),elevId:el.querySelector('#dE').value,luna:el.querySelector('#dL').value,tip:el.querySelector('#dT').value,
       nr:el.querySelector('#dN').value.trim(),start:el.querySelector('#dS').value,end:el.querySelector('#dF').value,ore:num(el.querySelector('#dO').value)};
     if(!d.start&&d.end)d.start=d.end;if(d.start&&!d.end)d.end=d.start;
-    if(!d.ore){el.querySelector('#dMsg').innerHTML='<div class="alert bad">Scrie numărul de ore motivate.</div>';return}
     if(d.start&&d.end&&d.end<d.start){el.querySelector('#dMsg').innerHTML='<div class="alert bad">Data de sfârșit e înaintea celei de început.</div>';return}
     if(ed){S.docs[S.docs.findIndex(x=>x.id===ed.id)]=d;editId=null}else S.docs.push(d);save();
     let warn='';
