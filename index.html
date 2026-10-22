@@ -95,6 +95,7 @@ tr.rinc td{background:#fde2e1!important;color:#b71c1c;-webkit-print-color-adjust
   <section id="v-absente"></section>
   <section id="v-documente"></section>
   <section id="v-bursa"></section>
+  <section id="v-fisa"></section>
   <section id="v-cereri"></section>
   <section id="v-module"></section>
   <section id="v-anual"></section>
@@ -117,7 +118,7 @@ const MODULE=[
 function modulLuna(l){return (MODULE.find(m=>m.luni.includes(l))||{}).n}
 const TIPURI=['Scutire','Cerere','Alte documente'];
 const KEY='absente-lunare-v1';
-const VIEWS=[['panou','Panou'],['absente','Absențe'],['documente','Documente'],['bursa','Bursă lunară'],['cereri','Cereri'],['module','Module'],['anual','Situație anuală'],['elevi','Elevi'],['setari','Backup & setări']];
+const VIEWS=[['panou','Panou'],['absente','Absențe'],['documente','Documente'],['bursa','Bursă lunară'],['fisa','Fișă burse sociale'],['cereri','Cereri'],['module','Module'],['anual','Situație anuală'],['elevi','Elevi'],['setari','Backup & setări']];
 
 const SEED_NAMES=[];
 
@@ -193,7 +194,7 @@ document.getElementById('nav').addEventListener('click',e=>{const b=e.target.clo
 function render(){
   renderNav();
   for(const [k] of VIEWS){const el=document.getElementById('v-'+k);el.classList.toggle('hide',k!==view);el.innerHTML=''}
-  ({panou:rPanou,absente:rAbsente,documente:rDocumente,bursa:rBursa,cereri:rCereri,module:rModule,anual:rAnual,elevi:rElevi,setari:rSetari})[view](document.getElementById('v-'+view));
+  ({panou:rPanou,absente:rAbsente,documente:rDocumente,bursa:rBursa,fisa:rFisa,cereri:rCereri,module:rModule,anual:rAnual,elevi:rElevi,setari:rSetari})[view](document.getElementById('v-'+view));
 }
 function setLuna(l){S.settings.lunaCurenta=l;save(true);render()}
 
@@ -361,6 +362,48 @@ function rBursa(el){
 }
 function lunaAn(L){const y=parseInt(S.settings.an);return SEM1.includes(L)&&L!=='Ianuarie'?y:y+1}
 function printBursa(){const s=document.getElementById('v-bursa');s.classList.add('printing');window.print();s.classList.remove('printing')}
+
+/* ---------- FIȘĂ BURSE SOCIALE (macheta: Monitorizare burse sociale) ---------- */
+// tipurile de bursă socială (coloanele din fișă); se bifează direct în fișă și se rețin pe elev
+const TIPURI_SOC=[['a','a<br>venit'],['bp','b<br>plasa-<br>ment'],['bo','b<br>orfan'],['c','c<br>medi-<br>cal'],['f','f<br>inclu-<br>ziune']];
+function socTip(e,k){return !!(e.socTip&&e.socTip[k])}
+function rFisa(el){
+  const L=S.settings.lunaCurenta,set=S.settings;
+  const elevi=S.elevi.filter(e=>e.burse.soc);
+  const rows=elevi.map((e,i)=>{
+    const st=lunaStats(e.id,L);
+    const da=st.has?!pierde(st):null;
+    return `<tr><td>${i+1}.</td><td class="n">${esc(e.nume)}</td>
+      ${TIPURI_SOC.map(([k])=>`<td><input type="checkbox" class="noprint" data-st="${e.id}" data-k="${k}" ${socTip(e,k)?'checked':''} style="width:20px;height:20px"><span class="print-only" style="text-align:center">${socTip(e,k)?'X':''}</span></td>`).join('')}
+      <td class="${da===false?'cbad':''}">${st.has?st.nem:''}</td>
+      <td class="${da===true?'ok':da===false?'bad':''}">${da===null?'':da?'DA':'NU'}</td></tr>`}).join('');
+  el.innerHTML=`<div class="card noprint"><div class="row"><b>Luna:</b>${lunaSel('fL',L)}
+    <button class="btn" onclick="printFisa()">Tipărește fișa (A4)</button></div>
+    <p class="muted" style="margin:8px 0 0">Apar elevii cu bursă socială (se bifează în „Elevi”). Bifează tipul bursei direct în tabel. Totalul absențelor nemotivate vine din „Absențe”, iar „Primește bursa” se calculează după pragul din Setări (${set.prag} nemotivate/lună).</p>
+    ${elevi.length?'':'<div class="alert warn">Niciun elev nu are bursă socială. Bifează „Bursă socială” la elevii respectivi, în tabul „Elevi”.</div>'}</div>
+  <div class="card fisa-pagina">
+    <div style="font-weight:700;font-size:15px">MONITORIZARE BURSE SOCIALE LUNA ${L.toUpperCase()} ${esc(set.an.replace('-','/'))}</div>
+    <p style="margin:10px 0 2px"><b>CLASA ${esc(set.clasa)}</b></p>
+    <p style="margin:2px 0 10px"><b>Diriginte</b> ${esc(set.diriginte)}</p>
+    <div class="tw"><table class="fisa-t"><thead>
+      <tr><th rowspan="2">Nr.<br>crt.</th><th rowspan="2">Elev</th><th colspan="5">Tipul bursei sociale</th><th rowspan="2">Total<br>absențe<br>nemotivate<br>în luna<br>monitorizată</th><th rowspan="2">Primește bursa în luna monitorizată?<br>DA/NU</th></tr>
+      <tr>${TIPURI_SOC.map(([k,t])=>`<th>${t}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <div style="margin-top:16px">
+      <p style="margin:0"><b>Certificat în privința realității, regularității și legalității,</b></p>
+      <p style="margin:2px 0 14px">Confirm că absențele au fost motivate legal și sunt în concordanță cu datele consemnate în catalogul electronic.</p>
+      <table style="border:none;width:100%"><tr>
+        <td style="border:none;text-align:left;width:50%"><b>Diriginte</b><br>Numele și prenumele<br><br>${esc(set.diriginte)}</td>
+        <td style="border:none;text-align:left"><br>Semnătura<br><br>________________</td></tr></table>
+    </div></div>`;
+  el.querySelector('#fL').onchange=e=>setLuna(e.target.value);
+  el.querySelectorAll('[data-st]').forEach(i=>i.onchange=()=>{const e=S.elevi.find(x=>x.id===i.dataset.st);e.socTip=e.socTip||{};e.socTip[i.dataset.k]=i.checked;save(true);render()});
+}
+function printFisa(){
+  const s=document.getElementById('v-fisa');s.classList.add('printing');
+  const st=document.createElement('style');st.textContent='@media print{@page{size:A4 portrait;margin:15mm}#v-fisa table{font-size:12px}#v-fisa .fisa-t th,#v-fisa .fisa-t td{padding:5px 4px}}';document.head.appendChild(st);
+  window.print();s.classList.remove('printing');st.remove();
+}
 
 /* ---------- CERERI ---------- */
 function rCereri(el){
@@ -587,8 +630,8 @@ function exportXlsx(){
    const rows=[h1,h2];S.elevi.forEach((e,i)=>{const r=[i+1,e.nume];MODULE.forEach(m=>{let mo=0,ne=0;m.luni.forEach(l=>{const st=lunaStats(e.id,l);mo+=st.mot;ne+=st.nem});r.push(z(mo),z(ne),z(mo+ne),z(cereriMod(e.id,m.n)))});rows.push(r)});
    sheets.push({name:'MODULE',rows,head:2,merges:mg,widths:[5,32,...Array(20).fill(8)]});}
   // 5. Elevi & burse
-  sheets.push({name:'ELEVI ȘI BURSE',head:1,widths:[5,32,12,12,12],rows:[['Nr.','Numele și prenumele','Bursă tehnologică','Bursă socială','Bursă reziliență'],
-    ...S.elevi.map((e,i)=>[i+1,e.nume,e.burse.teh?'DA':'',e.burse.soc?'DA':'',e.burse.rez?'DA':''])]});
+  sheets.push({name:'ELEVI ȘI BURSE',head:1,widths:[5,32,12,12,12,26],rows:[['Nr.','Numele și prenumele','Bursă tehnologică','Bursă socială','Bursă reziliență','Tip bursă socială'],
+    ...S.elevi.map((e,i)=>[i+1,e.nume,e.burse.teh?'DA':'',e.burse.soc?'DA':'',e.burse.rez?'DA':'',e.burse.soc?TIPURI_SOC.filter(([k])=>socTip(e,k)).map(([k])=>({a:'a venit',bp:'b plasament',bo:'b orfan',c:'c medical',f:'f incluziune'})[k]).join(', '):''])]});
   S.lastBackup=Date.now();save(true);
   download(buildXlsx(sheets),`Absente ${S.settings.clasa} ${stamp()}.xlsx`);render();
 }
