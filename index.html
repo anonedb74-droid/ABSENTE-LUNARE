@@ -380,7 +380,8 @@ function rFisa(el){
   const eleviTeh=S.elevi.filter(e=>e.burse.teh);
   el.innerHTML=`<div class="card noprint"><div class="row"><b>Luna:</b>${lunaSel('fL',L)}
     <button class="btn" onclick="printFisa('soc')">Tipărește fișa burse sociale (A4 vertical)</button>
-    <button class="btn" onclick="printFisa('teh')">Tipărește fișa bursă tehnologică (A4 orizontal)</button></div>
+    <button class="btn" onclick="printFisa('teh2')">Tipărește fișa burse tehnologice (A4 vertical)</button>
+    <button class="btn" onclick="printFisa('teh')">Tipărește macheta bursă tehnologică (A4 orizontal)</button></div>
     <p class="muted" style="margin:8px 0 0">Apar elevii cu bursă socială (se bifează în „Elevi”). Bifează tipul bursei direct în tabel. Totalul absențelor nemotivate vine din „Absențe”, iar „Primește bursa” se calculează după pragul din Setări (${set.prag} nemotivate/lună).</p>
     ${elevi.length?'':'<div class="alert warn">Niciun elev nu are bursă socială. Bifează „Bursă socială” la elevii respectivi, în tabul „Elevi”.</div>'}</div>
   <div class="card fisa-pagina fisa-bloc" id="fb-soc">
@@ -398,9 +399,33 @@ function rFisa(el){
         <td style="border:none;text-align:left;width:50%"><b>Diriginte</b><br>Numele și prenumele<br><br>${esc(set.diriginte)}</td>
         <td style="border:none;text-align:left"><br>Semnătura<br><br>________________</td></tr></table>
     </div></div>
+  <div class="card fisa-pagina fisa-bloc" id="fb-teh2">${fisaTeh2HTML(eleviTeh,L)}</div>
   <div class="card fisa-pagina fisa-bloc" id="fb-teh">${fisaTehHTML(eleviTeh,L)}</div>`;
   el.querySelector('#fL').onchange=e=>setLuna(e.target.value);
   el.querySelectorAll('[data-st]').forEach(i=>i.onchange=()=>{const e=S.elevi.find(x=>x.id===i.dataset.st);e.socTip=e.socTip||{};e.socTip[i.dataset.k]=i.checked;save(true);render()});
+}
+// fișa „Monitorizare burse tehnologice” (macheta cerută la bursa tehnologică):
+// aceeași formă ca fișa burselor sociale, dar în capul de tabel scrie doar „Bursa tehnologică”
+function fisaTeh2HTML(elevi,L){
+  const set=S.settings;
+  const rows=elevi.map((e,i)=>{const st=lunaStats(e.id,L);const da=st.has?!pierde(st):null;
+    return `<tr><td>${i+1}.</td><td class="n">${esc(e.nume)}</td><td>Tehnologică</td>
+      <td class="${da===false?'cbad':''}">${st.has?st.nem:''}</td>
+      <td class="${da===true?'ok':da===false?'bad':''}">${da===null?'':da?'DA':'NU'}</td></tr>`}).join('');
+  return `<div style="font-weight:700;font-size:15px">MONITORIZARE BURSE TEHNOLOGICE LUNA ${L.toUpperCase()} ${esc(set.an.replace('-','/'))}</div>
+    <p style="margin:10px 0 2px"><b>CLASA ${esc(set.clasa)}</b></p>
+    <p style="margin:2px 0 10px"><b>Diriginte</b> ${esc(set.diriginte)}</p>
+    ${elevi.length?'':'<div class="alert warn noprint">Niciun elev nu are bursă tehnologică. Bifează „Bursă tehnologică” în tabul „Elevi”.</div>'}
+    <div class="tw"><table class="fisa-t"><thead>
+      <tr><th>Nr.<br>crt.</th><th>Elev</th><th>Bursa tehnologică</th><th>Total<br>absențe<br>nemotivate<br>în luna<br>monitorizată</th><th>Primește bursa în luna monitorizată?<br>DA/NU</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <div style="margin-top:16px">
+      <p style="margin:0"><b>Certificat în privința realității, regularității și legalității,</b></p>
+      <p style="margin:2px 0 14px">Confirm că absențele au fost motivate legal și sunt în concordanță cu datele consemnate în catalogul electronic.</p>
+      <table style="border:none;width:100%"><tr>
+        <td style="border:none;text-align:left;width:50%"><b>Diriginte</b><br>Numele și prenumele<br><br>${esc(set.diriginte)}</td>
+        <td style="border:none;text-align:left"><br>Semnătura<br><br>________________</td></tr></table>
+    </div>`;
 }
 // fișa pentru bursa tehnologică: același tabel ca la „Bursă lunară”, doar elevii cu bursă tehnologică
 function fisaTehHTML(elevi,L){
@@ -425,9 +450,11 @@ function printFisa(care){
   const s=document.getElementById('v-fisa');
   s.classList.add('printing','tipar-'+care);
   const st=document.createElement('style');
-  st.textContent=care==='soc'
-    ?'@media print{@page{size:A4 portrait;margin:15mm}#v-fisa.tipar-soc #fb-teh{display:none!important}#v-fisa table{font-size:12px}#v-fisa .fisa-t th,#v-fisa .fisa-t td{padding:5px 4px}}'
-    :'@media print{@page{size:A4 landscape;margin:7mm}#v-fisa.tipar-teh #fb-soc{display:none!important}}';
+  // se tipărește doar fișa aleasă; celelalte se ascund
+  const ascunse=['soc','teh2','teh'].filter(x=>x!==care).map(x=>'#v-fisa #fb-'+x).join(',')+'{display:none!important}';
+  st.textContent=care==='teh'
+    ?'@media print{@page{size:A4 landscape;margin:7mm}'+ascunse+'}'
+    :'@media print{@page{size:A4 portrait;margin:15mm}'+ascunse+'#v-fisa table{font-size:12px}#v-fisa .fisa-t th,#v-fisa .fisa-t td{padding:5px 4px}}';
   document.head.appendChild(st);
   window.print();s.classList.remove('printing','tipar-'+care);st.remove();
 }
