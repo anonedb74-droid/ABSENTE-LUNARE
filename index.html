@@ -291,7 +291,7 @@ function lunaAzi(){const n=['Ianuarie','Februarie','Martie','Aprilie','Mai','Iun
 let docFilter={luna:lunaAzi(),elev:''};let editId=null;
 function rDocumente(el){
   const opts=S.elevi.map(e=>`<option value="${e.id}">${esc(e.nume)}</option>`).join('');
-  const list=S.docs.filter(d=>(!docFilter.luna||d.luna===docFilter.luna)&&(!docFilter.elev||d.elevId===docFilter.elev))
+  const list=S.docs.filter(d=>(!docFilter.luna||d.luna===docFilter.luna)&&(!docFilter.elev||d.elevId===docFilter.elev)&&(!docFilter.tip||d.tip===docFilter.tip))
     .sort((a,b)=>LUNI.indexOf(a.luna)-LUNI.indexOf(b.luna));
   const nume=id=>(S.elevi.find(e=>e.id===id)||{nume:'(elev șters)'}).nume;
   const fd=s=>s?new Date(s).toLocaleDateString('ro-RO'):'';
@@ -311,11 +311,13 @@ function rDocumente(el){
     <div class="row noprint" style="margin-bottom:10px">
       <select id="fL"><option value="">Toate lunile</option>${LUNI.map(l=>`<option ${l===docFilter.luna?'selected':''}>${l}</option>`).join('')}</select>
       <select id="fE"><option value="">Toți elevii</option>${S.elevi.map(e=>`<option value="${e.id}" ${e.id===docFilter.elev?'selected':''}>${esc(e.nume)}</option>`).join('')}</select>
+      <select id="fT"><option value="">Toate documentele</option>${TIPURI.map(t=>`<option value="${t}" ${t===docFilter.tip?'selected':''}>${t==='Scutire'?'Scutiri':t==='Cerere'?'Cereri':t}</option>`).join('')}</select>
       <span class="muted">${list.length} documente · ${sumOre(list)} ore${list.filter(d=>docLipsuri(d).length).length?` · <span class="lipsa">${(n=>n===1?'1 incomplet':n+' incomplete')(list.filter(d=>docLipsuri(d).length).length)} (cu roșu)</span>`:''}</span></div>
     <div class="tw"><table><thead><tr><th>Nr.</th><th>Numele și prenumele</th><th>Luna</th><th>Document</th><th>Nr. înregistrare</th><th>Început</th><th>Sfârșit</th><th>Ore</th><th class="noprint"></th></tr></thead>
     <tbody>${list.map((d,i)=>{const lp=docLipsuri(d);return `<tr class="${lp.length?'rinc':''}" ${lp.length?`title="Lipsește: ${lp.join(', ')}"`:''}><td>${i+1}</td><td class="n">${esc(nume(d.elevId))}</td><td>${d.luna}</td><td class="${d.tip==='Cerere'?'cwarn':''}">${d.tip}</td><td>${String(d.nr||'').trim()?esc(d.nr):'<span class="lipsa">fără nr.</span>'}</td><td>${fd(d.start)}</td><td>${fd(d.end)}</td><td>${num(d.ore)?`<b>${d.ore}</b>`:'<span class="lipsa">—</span>'}</td><td class="noprint" style="white-space:nowrap"><button class="btn sec" style="padding:4px 9px" data-ed="${d.id}">Modifică</button> <button class="btn del" data-del="${d.id}">Șterge</button></td></tr>`}).join('')||'<tr><td colspan="9" class="muted">Niciun document.</td></tr>'}</tbody></table></div></div>`;
   el.querySelector('#fL').onchange=e=>{docFilter.luna=e.target.value;render()};
   el.querySelector('#fE').onchange=e=>{docFilter.elev=e.target.value;render()};
+  el.querySelector('#fT').onchange=e=>{docFilter.tip=e.target.value;render()};
   if(ed){const f=el.querySelector('#dForm');f.querySelector('#dE').value=ed.elevId;f.querySelector('#dL').value=ed.luna;f.querySelector('#dT').value=ed.tip;
     f.querySelector('#dN').value=ed.nr||'';f.querySelector('#dS').value=ed.start||'';f.querySelector('#dF').value=ed.end||'';f.querySelector('#dO').value=num(ed.ore)?ed.ore:'';
     f.querySelector('#dCancel').onclick=()=>{editId=null;render()};}
