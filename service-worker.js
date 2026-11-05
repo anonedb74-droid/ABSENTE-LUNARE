@@ -1,12 +1,15 @@
 // Service worker pentru Absențe lunare — face aplicația disponibilă offline,
 // oricât timp a trecut de la ultima deschidere cu internet.
-const CACHE_NAME = 'absente-lunare-cache-v12';
+const CACHE_NAME = 'absente-lunare-cache-v13';
 const FILES_DE_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
+  './pv-stema.png',
+  './pv-isj.png',
+  './pv-liceu.png',
 ];
 
 self.addEventListener('install', (event) => {

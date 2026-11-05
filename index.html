@@ -66,6 +66,13 @@ tr.rinc td{background:#fde2e1!important;color:#b71c1c;-webkit-print-color-adjust
 #toast.on{opacity:1}
 .print-only{display:none}
 @media (max-width:640px){main{padding:10px}nav button{padding:7px 9px;font-size:13px}}
+.pv-pagina{font-family:'Calibri Light','Calibri',Carlito,sans-serif;font-size:14pt;color:#000;background:#fff;line-height:1.35}
+.pv-antet{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;border-bottom:1px solid #000;padding-bottom:4px;font-family:Calibri,Carlito,sans-serif;font-size:9pt;line-height:1.3}
+.pv-nume{font-weight:700;font-size:11pt}.pv-logo{display:flex;gap:6px;align-items:center}.pv-logo img{display:block}
+.pv-titlu{text-align:center;font-weight:700;margin:44px 0 18px}
+.pv-text{text-align:justify;text-indent:1.25cm;margin:0}
+.pv-lista{margin:16px 0 0 2.2cm;padding-left:1em}
+.pv-semn{border:none;width:100%;margin-top:110px;font-size:inherit}.pv-semn td{border:none!important;text-align:center;vertical-align:top;width:50%;padding:2px;background:none!important;font-size:inherit!important;line-height:1.35}
 @media print{
   @page{size:A4 landscape;margin:0}
   p{margin:2px 0}
@@ -96,6 +103,7 @@ tr.rinc td{background:#fde2e1!important;color:#b71c1c;-webkit-print-color-adjust
   <section id="v-documente"></section>
   <section id="v-bursa"></section>
   <section id="v-fisa"></section>
+  <section id="v-pv"></section>
   <section id="v-cereri"></section>
   <section id="v-module"></section>
   <section id="v-anual"></section>
@@ -118,7 +126,7 @@ const MODULE=[
 function modulLuna(l){return (MODULE.find(m=>m.luni.includes(l))||{}).n}
 const TIPURI=['Scutire','Cerere','Alte documente'];
 const KEY='absente-lunare-v1';
-const VIEWS=[['panou','Panou'],['absente','Absențe'],['documente','Documente'],['bursa','Bursă lunară'],['fisa','Fișă burse sociale'],['cereri','Cereri'],['module','Module'],['anual','Situație anuală'],['elevi','Elevi'],['setari','Backup & setări']];
+const VIEWS=[['panou','Panou'],['absente','Absențe'],['documente','Documente'],['bursa','Bursă lunară'],['fisa','Fișă burse sociale'],['pv','Proces-verbal'],['cereri','Cereri'],['module','Module'],['anual','Situație anuală'],['elevi','Elevi'],['setari','Backup & setări']];
 
 const SEED_NAMES=[];
 
@@ -194,7 +202,7 @@ document.getElementById('nav').addEventListener('click',e=>{const b=e.target.clo
 function render(){
   renderNav();
   for(const [k] of VIEWS){const el=document.getElementById('v-'+k);el.classList.toggle('hide',k!==view);el.innerHTML=''}
-  ({panou:rPanou,absente:rAbsente,documente:rDocumente,bursa:rBursa,fisa:rFisa,cereri:rCereri,module:rModule,anual:rAnual,elevi:rElevi,setari:rSetari})[view](document.getElementById('v-'+view));
+  ({panou:rPanou,absente:rAbsente,documente:rDocumente,bursa:rBursa,fisa:rFisa,pv:rPV,cereri:rCereri,module:rModule,anual:rAnual,elevi:rElevi,setari:rSetari})[view](document.getElementById('v-'+view));
 }
 function setLuna(l){S.settings.lunaCurenta=l;save(true);render()}
 
@@ -362,6 +370,56 @@ function rBursa(el){
 }
 function lunaAn(L){const y=parseInt(S.settings.an);return SEM1.includes(L)&&L!=='Ianuarie'?y:y+1}
 function printBursa(){const s=document.getElementById('v-bursa');s.classList.add('printing');window.print();s.classList.remove('printing')}
+
+/* ---------- PROCES-VERBAL de predare a documentelor de motivare (se dă la secretariat la sfârșit de lună) ---------- */
+// numărul de documente vine din „Documente” (luna aleasă, toată clasa); se poate corecta de mână pentru fiecare lună
+function pvLuna(L){S.pv=S.pv||{};S.pv[L]=S.pv[L]||{};return S.pv[L]}
+function pvAuto(L){const d=S.docs.filter(x=>x.luna===L);return {sc:d.filter(x=>x.tip==='Scutire').length,ce:d.filter(x=>x.tip==='Cerere').length,al:d.filter(x=>x.tip==='Alte documente').length}}
+function pvVal(L,k){const p=pvLuna(L);return (k in p)&&p[k]!==''?num(p[k]):pvAuto(L)[k]}
+// „X F” -> „a X-a F” (cum scrie în procesul-verbal)
+function clasaArt(c){const m=String(c||'').trim().match(/^([IVXL]+)\s*[-.]?\s*(.*)$/i);return m?`a ${m[1].toUpperCase()}-a ${m[2]}`.trim():String(c||'')}
+function fdRo(iso){const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}.${m[2]}.${m[1]}`:''}
+function isoAzi(){const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)}
+function rPV(el){
+  const L=S.settings.lunaCurenta,set=S.settings,p=pvLuna(L),a=pvAuto(L);
+  const data=p.data||isoAzi();
+  const corectat=k=>(k in p)&&p[k]!==''&&num(p[k])!==a[k];
+  el.innerHTML=`<div class="card noprint"><div class="row"><b>Luna:</b>${lunaSel('pL',L)}
+      <label>Data procesului-verbal <input type="date" id="pD" value="${data}"></label>
+      <button class="btn" onclick="printPV()">Tipărește procesul-verbal (A4)</button></div>
+    <div class="row" style="margin-top:10px">
+      <label>Adeverințe medicale <input type="number" min="0" id="pSc" value="${pvVal(L,'sc')}" style="width:80px"></label>
+      <label>Cereri de motivare <input type="number" min="0" id="pCe" value="${pvVal(L,'ce')}" style="width:80px"></label>
+      <label>Alte documente <input type="number" min="0" id="pAl" value="${pvVal(L,'al')}" style="width:80px"></label>
+      <label>Secretar (opțional) <input type="text" id="pSe" value="${esc(set.secretar||'')}" placeholder="numele secretarului"></label>
+      ${['sc','ce','al'].some(corectat)?'<button class="btn sec" id="pRe">Recalculează din Documente</button>':''}</div>
+    <p class="muted" style="margin:8px 0 0">Numerele se iau din „Documente” pentru luna ${L.toLowerCase()} (în jurnal: ${a.sc} adeverințe, ${a.ce} cereri, ${a.al} alte documente). Dacă la secretariat predai altfel, le corectezi aici; corectura se păstrează doar pentru luna aceasta. Data se completează cu ziua de azi.</p></div>
+  <div class="card fisa-pagina pv-pagina">
+    <div class="pv-antet">
+      <div class="pv-scoala"><div class="pv-nume">LICEUL TEHNOLOGIC „AL. VLAHUȚĂ” ȘENDRICENI</div>
+        <div><b>Strada Principală nr.44, cod 717 380, BOTOȘANI</b></div><div>telefon/fax: +40 23 161.01.24</div>
+        <div>adresa web: <u>http://www.gsvlahuta.ro</u></div><div>e-mail: <u>vlahuta@ltavs.ro</u></div>
+        <div style="margin-top:4px">Nr ……………… data ………………………………</div></div>
+      <div class="pv-logo"><img src="pv-stema.png" alt="" style="height:21mm"><img src="pv-isj.png" alt="" style="height:21mm"><img src="pv-liceu.png" alt="" style="height:21mm"></div>
+    </div>
+    <div class="pv-titlu">PROCES VERBAL</div>
+    <p class="pv-text">Încheiat astăzi <b>${fdRo(data)}</b> de către profesor <b>${esc(set.diriginte.replace(/^prof\.?\s*/i,''))}</b> în calitate de diriginte al <b>clasei ${esc(clasaArt(set.clasa))}</b> cu ocazia predării către secretariatul Liceului Tehnologic „Alexandru Vlahuță” Șendriceni, documente de motivare a absențelor pe luna <b>${L.toUpperCase()} – ${lunaAn(L)}.</b></p>
+    <ul class="pv-lista"><li>Adeverințe medicale: ${pvVal(L,'sc')}</li><li>Cereri de motivare: ${pvVal(L,'ce')}</li><li>Alte documente: ${pvVal(L,'al')}</li></ul>
+    <table class="pv-semn"><tr><td>Am predat,</td><td>Am primit,</td></tr>
+      <tr><td style="padding-top:18px">Diriginte:<br>${esc(set.diriginte)}</td><td style="padding-top:18px">Secretar:<br>${esc(set.secretar||'')}</td></tr></table>
+  </div>`;
+  el.querySelector('#pL').onchange=e=>setLuna(e.target.value);
+  el.querySelector('#pD').onchange=e=>{pvLuna(L).data=e.target.value;save();render()};
+  [['pSc','sc'],['pCe','ce'],['pAl','al']].forEach(([id,k])=>el.querySelector('#'+id).onchange=e=>{pvLuna(L)[k]=e.target.value;save();render()});
+  el.querySelector('#pSe').onchange=e=>{S.settings.secretar=e.target.value.trim();save();render()};
+  const re=el.querySelector('#pRe');if(re)re.onclick=()=>{['sc','ce','al'].forEach(k=>delete pvLuna(L)[k]);save();render()};
+}
+function printPV(){
+  const s=document.getElementById('v-pv');s.classList.add('printing');
+  const st=document.createElement('style');
+  st.textContent='@media print{@page{size:A4 portrait;margin:0}main{padding:15mm!important}#v-pv .pv-pagina{font-size:14pt;box-shadow:none!important;border:none!important;border-radius:0!important}}';
+  document.head.appendChild(st);window.print();s.classList.remove('printing');st.remove();
+}
 
 /* ---------- FIȘĂ BURSE SOCIALE (macheta: Monitorizare burse sociale) ---------- */
 // tipurile de bursă socială (coloanele din fișă); se bifează direct în fișă și se rețin pe elev
