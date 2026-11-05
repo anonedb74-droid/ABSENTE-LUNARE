@@ -39,6 +39,7 @@ select,input,button{font:inherit}
 select,input[type=text],input[type=number],input[type=date]{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
 .btn{border:1px solid var(--pri);background:var(--pri);color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer}
 .btn.sec{background:var(--card);color:var(--pri)}
+.exp-t td{border:none!important;text-align:left!important;padding:3px 8px 3px 0!important;background:none!important}
 .btn.del{background:var(--card);color:var(--bad);border-color:var(--bad);padding:4px 9px}
 .btn:disabled{opacity:.5}
 .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -346,7 +347,9 @@ function rBursa(el){
   const motDoc=T.oreSc+T.oreCe+T.oreAl, mot=T.total-T.nem;
   el.innerHTML=`<div class="card noprint"><div class="row"><b>Luna:</b>${lunaSel('bL',L)}
     <label class="row" style="gap:6px"><input type="checkbox" id="bB" ${set.doarBursieri?'checked':''}> doar elevii cu bursă</label>
-    <button class="btn" onclick="printBursa()">Tipărește macheta (A4)</button></div>
+    <button class="btn" onclick="printBursa()">Tipărește macheta (A4)</button>
+    <button class="btn sec" onclick="exportWord(document.querySelector('#v-bursa > .card:not(.noprint)'),{landscape:true,marginMm:7,basePt:9,nume:numeFisier('Macheta monitorizare bursa')})">Word</button>
+    <button class="btn sec" onclick="printBursa()">PDF</button></div><p class="muted" style="margin:6px 0 0">„Word” descarcă fișa ca document .docx. „PDF” deschide fereastra de tipărire: la <b>Destinație</b> alege <b>„Salvează ca PDF”</b>, apoi <b>Salvează</b>.</p>
     ${mot!==motDoc?`<div class="alert warn">Motivatele din catalog (${mot}) nu se potrivesc cu orele din documente (${motDoc}). Verifică la „Absențe”.</div>`:''}</div>
   <div class="card">
     <div style="text-align:center"><b>MONITORIZARE ABSENȚE BURSĂ</b><br>AN ȘCOLAR ${esc(set.an)}</div>
@@ -386,7 +389,9 @@ function rPV(el){
   const corectat=k=>(k in p)&&p[k]!==''&&num(p[k])!==a[k];
   el.innerHTML=`<div class="card noprint"><div class="row"><b>Luna:</b>${lunaSel('pL',L)}
       <label>Data procesului-verbal <input type="date" id="pD" value="${data}"></label>
-      <button class="btn" onclick="printPV()">Tipărește procesul-verbal (A4)</button></div>
+      <button class="btn" onclick="printPV()">Tipărește procesul-verbal (A4)</button>
+      <button class="btn sec" onclick="exportWord(document.querySelector('#v-pv .pv-pagina'),{basePt:14,nume:numeFisier('Proces-verbal absente')})">Word</button>
+      <button class="btn sec" onclick="printPV()">PDF</button></div><p class="muted" style="margin:6px 0 0">„Word” descarcă procesul-verbal ca document .docx. „PDF” deschide fereastra de tipărire: la <b>Destinație</b> alege <b>„Salvează ca PDF”</b>, apoi <b>Salvează</b>.</p>
     <div class="row" style="margin-top:10px">
       <label>Adeverințe medicale <input type="number" min="0" id="pSc" value="${pvVal(L,'sc')}" style="width:80px"></label>
       <label>Cereri de motivare <input type="number" min="0" id="pCe" value="${pvVal(L,'ce')}" style="width:80px"></label>
@@ -437,9 +442,12 @@ function rFisa(el){
       <td class="${da===true?'ok':da===false?'bad':''}">${da===null?'':da?'DA':'NU'}</td></tr>`}).join('');
   const eleviTeh=S.elevi.filter(e=>e.burse.teh);
   el.innerHTML=`<div class="card noprint"><div class="row"><b>Luna:</b>${lunaSel('fL',L)}
-    <button class="btn" onclick="printFisa('soc')">Tipărește fișa burse sociale (A4 vertical)</button>
-    <button class="btn" onclick="printFisa('teh2')">Tipărește fișa burse tehnologice (A4 vertical)</button>
-    <button class="btn" onclick="printFisa('teh')">Tipărește macheta bursă tehnologică (A4 orizontal)</button></div>
+    </div>
+    <table class="exp-t" style="margin-top:8px;width:auto"><tbody>
+      <tr><td class="n">Fișa burse sociale (A4 vertical)</td><td><button class="btn" onclick="printFisa('soc')">Tipărește</button> <button class="btn sec" onclick="exportWord(document.getElementById('fb-soc'),{basePt:11,nume:numeFisier('Monitorizare burse sociale')})">Word</button> <button class="btn sec" onclick="printFisa('soc')">PDF</button></td></tr>
+      <tr><td class="n">Fișa burse tehnologice (A4 vertical)</td><td><button class="btn" onclick="printFisa('teh2')">Tipărește</button> <button class="btn sec" onclick="exportWord(document.getElementById('fb-teh2'),{basePt:11,nume:numeFisier('Monitorizare burse tehnologice')})">Word</button> <button class="btn sec" onclick="printFisa('teh2')">PDF</button></td></tr>
+      <tr><td class="n">Macheta bursă tehnologică (A4 orizontal)</td><td><button class="btn" onclick="printFisa('teh')">Tipărește</button> <button class="btn sec" onclick="exportWord(document.getElementById('fb-teh'),{landscape:true,marginMm:7,basePt:9,nume:numeFisier('Macheta bursa tehnologica')})">Word</button> <button class="btn sec" onclick="printFisa('teh')">PDF</button></td></tr>
+    </tbody></table><p class="muted" style="margin:6px 0 0">„Word” descarcă fișa aleasă ca document .docx. „PDF” deschide fereastra de tipărire: la <b>Destinație</b> alege <b>„Salvează ca PDF”</b>, apoi <b>Salvează</b>.</p>
     <p class="muted" style="margin:8px 0 0">Apar elevii cu bursă socială (se bifează în „Elevi”). Bifează tipul bursei direct în tabel. Totalul absențelor nemotivate vine din „Absențe”, iar „Primește bursa” se calculează după pragul din Setări (${set.prag} nemotivate/lună).</p>
     ${elevi.length?'':'<div class="alert warn">Niciun elev nu are bursă socială. Bifează „Bursă socială” la elevii respectivi, în tabul „Elevi”.</div>'}</div>
   <div class="card fisa-pagina fisa-bloc" id="fb-soc">
@@ -668,6 +676,165 @@ function importCatalog(grid){
   return {grid,luni,n,mot,nem,lipsa,nuSunt:S.elevi.filter(e=>!gasiti.has(e.id)).map(e=>e.nume)};
 }
 /* ---------- EXPORT ---------- */
+/* ---------- EXPORT WORD (.docx) — fără biblioteci, funcționează offline ----------
+   Transformă fișa afișată pe ecran (tabele, paragrafe, liste, sigle) într-un document Word A4, cu fontul Calibri Light. */
+const MM_TW=56.7;
+function dxEsc(s){return xesc(s)}
+function dxSkip(el){
+  if(el.nodeType!==1)return false;
+  if(el.matches('.noprint,.tag,input,select,button,.alert,script,style'))return true;
+  if(el.classList.contains('print-only'))return false;
+  return getComputedStyle(el).display==='none';
+}
+const DX_BLOCK=new Set(['P','DIV','UL','OL','LI','TABLE','H1','H2','H3','H4','SECTION','THEAD','TBODY','TR']);
+function dxIsBlock(el){return el.nodeType===1&&(DX_BLOCK.has(el.tagName)||el.classList.contains('print-only'))}
+function dxRunProps(el,ctx){
+  const cs=getComputedStyle(el);let p='';
+  if(parseInt(cs.fontWeight)>=600)p+='<w:b/>';
+  if(cs.fontStyle==='italic')p+='<w:i/>';
+  if((cs.textDecorationLine||'').includes('underline'))p+='<w:u w:val="single"/>';
+  const hp=Math.max(12,Math.round(parseFloat(cs.fontSize)/ctx.bodyPx*ctx.basePt*2));
+  p+=`<w:sz w:val="${hp}"/><w:szCs w:val="${hp}"/>`;
+  return p;
+}
+// adună bucățile de text ale unui paragraf
+async function dxInline(node,ctx,out){
+  if(node.nodeType===3){out.push({t:node.textContent.replace(/\s+/g,' '),p:dxRunProps(node.parentElement,ctx)});return}
+  if(node.nodeType!==1||dxSkip(node))return;
+  if(node.tagName==='BR'){out.push({br:true});return}
+  if(node.tagName==='IMG'){out.push({img:await dxImg(node,ctx)});return}
+  for(const c of node.childNodes)await dxInline(c,ctx,out);
+}
+function dxRunsXml(list){
+  // spațiile multiple se strâng, iar cele de la început/sfârșit se taie
+  const r=list.filter(x=>x.br||x.img||x.t!=='');
+  for(let i=0;i<r.length;i++){if(r[i].t===undefined)continue;
+    if(i>0&&r[i-1].t!==undefined&&r[i-1].t.endsWith(' ')&&r[i].t.startsWith(' '))r[i].t=r[i].t.slice(1)}
+  while(r.length&&r[0].t!==undefined&&!(r[0].t=r[0].t.replace(/^\s+/,'')))r.shift();
+  while(r.length&&r[r.length-1].t!==undefined&&!(r[r.length-1].t=r[r.length-1].t.replace(/\s+$/,'')))r.pop();
+  while(r.length&&r[0].br)r.shift();while(r.length&&r[r.length-1].br)r.pop();
+  return r.map(x=>x.br?'<w:r><w:br/></w:r>':x.img?x.img:`<w:r><w:rPr>${x.p}</w:rPr><w:t xml:space="preserve">${dxEsc(x.t)}</w:t></w:r>`).join('');
+}
+function dxPPr(el,extra,useSpacing){
+  const cs=getComputedStyle(el);let p='';
+  const a=cs.textAlign;const jc=a==='center'?'center':a==='justify'?'both':(a==='right'||a==='end')?'right':'';
+  if(useSpacing){const b=Math.round(parseFloat(cs.marginTop)*15),af=Math.round(parseFloat(cs.marginBottom)*15);if(b||af)p+=`<w:spacing w:before="${Math.min(b,1800)}" w:after="${Math.min(af,1800)}"/>`}
+  const ti=Math.round(parseFloat(cs.textIndent)*15);if(ti>0)p+=`<w:ind w:firstLine="${ti}"/>`;
+  if(jc)p+=`<w:jc w:val="${jc}"/>`;
+  return `<w:pPr>${extra||''}${p}</w:pPr>`;
+}
+async function dxImg(img,ctx){
+  const buf=new Uint8Array(await (await fetch(img.src)).arrayBuffer());
+  const n=ctx.imgs.length+1,rid='rIdImg'+n;ctx.imgs.push({name:`media/image${n}.png`,data:buf,rid});
+  const r=img.getBoundingClientRect(),cx=Math.round(r.width*9525),cy=Math.round(r.height*9525);
+  return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="Imagine ${n}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${n}" name="img${n}.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r> `;
+}
+// paragraf gol de înălțime fixă: păstrează spațiile mari din fișă (ex. deasupra semnăturilor)
+function dxSpacer(tw){return `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${Math.min(tw,4000)}" w:lineRule="exact"/></w:pPr></w:p>`}
+// conținutul unui element bloc -> paragrafe și tabele Word
+async function dxBlocks(el,ctx,wTw,wPx){
+  let xml='',pend=[];
+  const kids=[...el.childNodes].filter(c=>!(c.nodeType===1&&dxSkip(c)));
+  const hasBlock=kids.some(dxIsBlock);
+  const flush=async()=>{if(!pend.length)return;const out=[];for(const n of pend)await dxInline(n,ctx,out);pend=[];
+    const runs=dxRunsXml(out);if(runs)xml+=`<w:p>${dxPPr(el,'',!hasBlock&&el.tagName==='P')}${runs}</w:p>`};
+  for(const c of kids){
+    if(!dxIsBlock(c)){pend.push(c);continue}
+    await flush();
+    {const mt=Math.round(parseFloat(getComputedStyle(c).marginTop)*15);if(c.tagName!=='P'&&mt>=150)xml+=dxSpacer(mt)}
+    if(c.tagName==='TABLE')xml+=await dxTable(c,ctx,wTw,wPx);
+    else if(c.tagName==='UL'||c.tagName==='OL'){
+      const ind=Math.round((parseFloat(getComputedStyle(c).paddingLeft)+parseFloat(getComputedStyle(c).marginLeft))*15);
+      const sp=Math.round(parseFloat(getComputedStyle(c).marginTop)*15);let first=true;
+      for(const li of c.children){if(dxSkip(li))continue;const out=[];await dxInline(li,ctx,out);
+        xml+=`<w:p><w:pPr>${first&&sp?`<w:spacing w:before="${sp}"/>`:''}<w:ind w:left="${ind}" w:hanging="284"/></w:pPr><w:r><w:rPr>${dxRunProps(li,ctx)}</w:rPr><w:t>•</w:t></w:r><w:r><w:tab/></w:r>${dxRunsXml(out)}</w:p>`;first=false}
+    }
+    else if(getComputedStyle(c).display==='flex')xml+=await dxFlex(c,ctx,wTw,wPx);
+    else{
+      xml+=await dxBlocks(c,ctx,wTw,wPx);
+    }
+  }
+  await flush();
+  return xml;
+}
+async function dxFlex(el,ctx,wTw,wPx){
+  const kids=[...el.children].filter(c=>!dxSkip(c));
+  if(kids.every(k=>k.tagName==='IMG')){const out=[];for(const k of kids)out.push({img:await dxImg(k,ctx)});return `<w:p>${dxPPr(el)}${dxRunsXml(out)}</w:p>`}
+  let nat=kids.map(k=>Math.round(k.getBoundingClientRect().width*15));const sum=nat.reduce((a,b)=>a+b,0)||1;
+  if(sum<=wTw)nat[0]+=wTw-sum;else nat=nat.map(w=>Math.round(w/sum*wTw));
+  const cs=getComputedStyle(el),bb=parseFloat(cs.borderBottomWidth)>0;
+  const va=cs.alignItems==='flex-end'||cs.alignItems==='end'?'bottom':cs.alignItems==='center'?'center':'top';
+  let cells='';const grid=[];
+  for(const [ki,k] of kids.entries()){const w=nat[ki];grid.push(w);
+    const inner=k.tagName==='IMG'?`<w:p>${dxRunsXml([{img:await dxImg(k,ctx)}])}</w:p>`:(await dxBlocks(k,ctx,w,k.getBoundingClientRect().width))||'<w:p/>';
+    cells+=`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:vAlign w:val="${va}"/></w:tcPr>${inner}</w:tc>`}
+  const brd=`<w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="${bb?'single':'nil'}" w:sz="6" w:color="000000"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="${wTw}" w:type="dxa"/><w:tblLayout w:type="fixed"/>${brd}<w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${grid.map(g=>`<w:gridCol w:w="${g}"/>`).join('')}</w:tblGrid><w:tr>${cells}</w:tr></w:tbl><w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:sz w:val="8"/></w:rPr></w:pPr></w:p>`;
+}
+async function dxTable(tbl,ctx,wTw,wPx){
+  const rows=[...tbl.rows].filter(r=>!dxSkip(r));
+  // grila: rowspan/colspan -> celule îmbinate în Word
+  const occ=[],cellsAt=[];let ncol=0;
+  rows.forEach((tr,ri)=>{occ[ri]=occ[ri]||[];let c=0;cellsAt[ri]=[];
+    for(const td of tr.cells){if(dxSkip(td))continue;while(occ[ri][c])c++;
+      const cs=td.colSpan||1,rs=td.rowSpan||1;cellsAt[ri].push({td,c,cs,rs});
+      for(let a=0;a<rs;a++){occ[ri+a]=occ[ri+a]||[];for(let b=0;b<cs;b++)occ[ri+a][c+b]=a===0?'s':{from:td,cs,top:ri}}
+      c+=cs;ncol=Math.max(ncol,c)}});
+  const colPx=new Array(ncol).fill(0);
+  cellsAt.forEach(r=>r.forEach(x=>{if(x.cs===1)colPx[x.c]=Math.max(colPx[x.c],x.td.getBoundingClientRect().width)}));
+  cellsAt.forEach(r=>r.forEach(x=>{if(x.cs>1){const have=colPx.slice(x.c,x.c+x.cs).reduce((a,b)=>a+b,0),w=x.td.getBoundingClientRect().width;
+    if(have<w){const add=(w-have)/x.cs;for(let b=0;b<x.cs;b++)colPx[x.c+b]+=add}}}));
+  const tPx=colPx.reduce((a,b)=>a+b,0)||1;
+  const tblTw=Math.round(Math.min(wTw,tbl.getBoundingClientRect().width/(wPx||tPx)*wTw));
+  const colTw=colPx.map(w=>Math.round(w/tPx*tblTw));
+  const first=tbl.querySelector('td,th');const fcs=first?getComputedStyle(first):null;
+  const borderless=!fcs||parseFloat(fcs.borderLeftWidth)===0&&parseFloat(fcs.borderTopWidth)===0;
+  const bv=borderless?'nil':'single';
+  const brd=`<w:tblBorders>${['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="${bv}" w:sz="4" w:color="000000"/>`).join('')}</w:tblBorders>`;
+  let xml=`<w:tbl><w:tblPr><w:tblW w:w="${tblTw}" w:type="dxa"/><w:tblLayout w:type="fixed"/>${brd}<w:tblCellMar><w:left w:w="${borderless?0:57}" w:type="dxa"/><w:right w:w="${borderless?0:57}" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${colTw.map(g=>`<w:gridCol w:w="${g}"/>`).join('')}</w:tblGrid>`;
+  for(let ri=0;ri<rows.length;ri++){
+    const head=rows[ri].parentElement.tagName==='THEAD';
+    xml+=`<w:tr><w:trPr><w:cantSplit/>${head?'<w:tblHeader/>':''}</w:trPr>`;
+    let c=0;const list=cellsAt[ri];let li=0;
+    while(c<ncol){
+      const o=occ[ri][c];
+      if(o&&o!=='s'){const w=colTw.slice(c,c+o.cs).reduce((a,b)=>a+b,0);
+        xml+=`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.cs>1?`<w:gridSpan w:val="${o.cs}"/>`:''}<w:vMerge/></w:tcPr><w:p/></w:tc>`;c+=o.cs;continue}
+      const x=list[li++];if(!x){c++;continue}
+      const w=colTw.slice(x.c,x.c+x.cs).reduce((a,b)=>a+b,0),wpx=x.td.getBoundingClientRect().width;
+      const th=x.td.tagName==='TH';
+      const pt=Math.round(parseFloat(getComputedStyle(x.td).paddingTop)*15);
+      const inner=(pt>=120?dxSpacer(pt):'')+((await dxBlocks(x.td,ctx,w,wpx))||`<w:p>${dxPPr(x.td)}</w:p>`);
+      xml+=`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${x.cs>1?`<w:gridSpan w:val="${x.cs}"/>`:''}${x.rs>1?'<w:vMerge w:val="restart"/>':''}${th&&!borderless?'<w:shd w:val="clear" w:color="auto" w:fill="EEEEEE"/>':''}<w:vAlign w:val="${borderless?'top':'center'}"/></w:tcPr>${inner}</w:tc>`;
+      c+=x.cs;
+    }
+    xml+='</w:tr>';
+  }
+  return xml+'</w:tbl><w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
+}
+// root = elementul afișat; opt: {landscape, marginMm, basePt, nume}
+async function exportWord(root,opt){
+  if(!root){toast('Nu am găsit fișa');return}
+  try{
+    const landscape=!!opt.landscape,m=Math.round((opt.marginMm||15)*MM_TW);
+    const pw=landscape?16838:11906,ph=landscape?11906:16838,wTw=pw-2*m;
+    const rcs=getComputedStyle(root);
+    const wPx=root.getBoundingClientRect().width-parseFloat(rcs.paddingLeft)-parseFloat(rcs.paddingRight);
+    const ctx={imgs:[],bodyPx:parseFloat(rcs.fontSize),basePt:opt.basePt||11};
+    const body=await dxBlocks(root,ctx,wTw,wPx);
+    const sect=`<w:sectPr><w:pgSz w:w="${pw}" w:h="${ph}"${landscape?' w:orient="landscape"':''}/><w:pgMar w:top="${m}" w:right="${m}" w:bottom="${m}" w:left="${m}" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr>`;
+    const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>${body}${sect}</w:body></w:document>`;
+    const hp=Math.round(ctx.basePt*2);
+    const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri Light" w:hAnsi="Calibri Light" w:eastAsia="Calibri Light" w:cs="Calibri Light"/><w:sz w:val="${hp}"/><w:szCs w:val="${hp}"/><w:lang w:val="ro-RO"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblCellMar><w:left w:w="57" w:type="dxa"/><w:right w:w="57" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`;
+    const ct=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`;
+    const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+    const drels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdSt" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${ctx.imgs.map(i=>`<Relationship Id="${i.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${i.name}"/>`).join('')}</Relationships>`;
+    const files=[['[Content_Types].xml',ct],['_rels/.rels',rels],['word/document.xml',doc],['word/styles.xml',styles],['word/_rels/document.xml.rels',drels],...ctx.imgs.map(i=>['word/'+i.name,i.data])];
+    download(zip(files,'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),opt.nume.replace(/[\\/:*?"<>|]/g,'')+'.docx');
+    toast('Document Word descărcat');
+  }catch(e){alert('Nu am putut face documentul Word: '+e.message)}
+}
+function numeFisier(tip){const L=S.settings.lunaCurenta;return `${tip} ${S.settings.clasa} ${L} ${lunaAn(L)}`}
 function stamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`}
 function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 function exportJson(){S.lastBackup=Date.now();save(true);download(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),`Absente ${S.settings.clasa} backup ${stamp()}.json`);render()}
@@ -675,10 +842,10 @@ function exportJson(){S.lastBackup=Date.now();save(true);download(new Blob([JSON
 /* mini scriitor XLSX (fără biblioteci, funcționează offline) */
 const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
 function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
-function zip(files){
+function zip(files,mime){
   const enc=new TextEncoder(),parts=[],cen=[];let off=0;
   for(const [name,str] of files){
-    const nb=enc.encode(name),data=enc.encode(str),crc=crc32(data);
+    const nb=enc.encode(name),data=typeof str==='string'?enc.encode(str):str,crc=crc32(data);
     const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);
     h.setUint32(14,crc,true);h.setUint32(18,data.length,true);h.setUint32(22,data.length,true);h.setUint16(26,nb.length,true);
     parts.push(new Uint8Array(h.buffer),nb,data);
@@ -688,7 +855,7 @@ function zip(files){
   }
   const cs=cen.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));
   e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
-  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:mime||'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 function colL(i){let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
 function xesc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'')}
